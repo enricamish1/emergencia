@@ -1,0 +1,3156 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2F2F2F">
+  <meta name="description" content="Guia per a l'atenció mèdica emergent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="/emergencia/icon-192.png">
+  <link rel="apple-touch-icon" href="/emergencia/icon-192.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/emergencia/service-worker.js', { scope: '/emergencia/' })
+      .then(reg => {
+        console.log('Service Worker registered successfully:', reg);
+        reg.onupdatefound = () => {
+          const newWorker = reg.installing;
+          newWorker.onstatechange = () => {
+            if (newWorker.state === 'activated') {
+              console.log('New Service Worker activated');
+            }
+          };
+        };
+      })
+      .catch(err => {
+        console.error('Service Worker registration failed:', err);
+        console.error('Make sure service-worker.js exists and is accessible');
+      });
+  }
+</script>  
+<meta charset="UTF-8">
+<title>Emergència</title>
+
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  /* Use dvh so the layout never hides under mobile browser chrome */
+  min-height: 100dvh;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: clamp(16px, 4.5vw, 20px); /* afegir aquesta línia */
+  background: #f5f5f5;
+  margin: 0;
+  /* Smooth font rendering on mobile */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── HEADER ────────────────────────────────────────────────────── */
+header {
+  background: #2F2F2F;
+  color: white;
+  padding: clamp(12px, 4vw, 20px);
+  font-size: clamp(22px, 6vw, 26px); /* pujar el mínim de 18px → 22px */
+  text-align: center;
+}
+
+/* ─── SCREENS ───────────────────────────────────────────────────── */
+.screen {
+  display: none;
+  padding: clamp(12px, 4vw, 20px);
+}
+
+/* ─── EMERGENCY BUTTONS ─────────────────────────────────────────── */
+.emergency-btn {
+  display: block;
+  width: 100%;
+  /* Minimum 44 px tap target (Apple/Google HIG) */
+  min-height: 44px;
+  padding: clamp(10px, 3vw, 14px);
+  margin-bottom: 10px;
+  background: #003366;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: clamp(18px, 5vw, 22px); /* pujar el mínim de 16px → 18px */
+  cursor: pointer;
+  text-align: left;
+  /* Prevent text from being cut off on narrow screens */
+  word-break: break-word;
+  /* Remove tap highlight on iOS */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Only apply hover on devices that support it (not touch screens) */
+@media (hover: hover) {
+  .emergency-btn:hover {
+    background: #0055aa;
+  }
+}
+
+/* ─── SECTION CONTAINER ─────────────────────────────────────────── */
+#section-container {
+  position: absolute;
+  top: 200px;
+  left: 0;
+  right: 0;
+  bottom: 120px;
+  overflow-y: hidden;
+  padding: clamp(12px, 4vw, 20px);
+  z-index: 5;
+}
+
+/* ─── SECTION BLOCKS ────────────────────────────────────────────── */
+.section-block {
+  border-left: 6px solid #2F2F2F;
+  padding-left: clamp(8px, 3vw, 12px);
+  font-size: clamp(16px, 4.5vw, 18px); /* pujar el mínim de 14px → 16px */
+  line-height: 1.6;
+  margin-bottom: 16px;
+  word-break: break-word;
+}
+
+/* ─── SECTION BUTTONS ───────────────────────────────────────────── */
+.section-buttons {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 4vw, 20px);
+  z-index: 30;
+  /* Allow wrapping on very narrow screens */
+  flex-wrap: wrap;
+  padding: 0 12px;
+}
+
+/* ─── COLOUR ACCENTS ────────────────────────────────────────────── */
+.red    { border-color: #8B0000; }
+.blue   { border-color: #003366; }
+.purple { border-color: #4B0082; }
+.orange { border-color: #CC5500; }
+.green  { border-color: #0B4F2C; }
+
+/* ─── TIMER / SYNC BUTTONS ──────────────────────────────────────── */
+#timer-sync-buttons {
+  position: absolute;
+  top: 250px;
+  right: clamp(8px, 3vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 20;
+}
+
+#timer-sync-buttons button {
+  background: #CC5500;
+  color: white;
+  border: none;
+  padding: clamp(8px, 2.5vw, 10px) clamp(10px, 3vw, 14px);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(18px, 5vw, 20px);
+  /* Minimum tap target */
+  min-height: 44px;
+  min-width: 44px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  #timer-sync-buttons button:hover {
+    background: #dd6a00;
+  }
+}
+
+body.darkmode #timer-sync-buttons button {
+  background: #444;
+  color: #fff;
+}
+
+/* ─── OVERFLOW BUTTONS ──────────────────────────────────────────── */
+#overflow-btn,
+#overflow-up-btn {
+  position: absolute;
+  bottom: 130px;
+  background: #CC5500;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  pointer-events: auto;
+  z-index: 10;
+  /* Minimum tap target */
+  min-height: 44px;
+  min-width: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#overflow-btn    { right: clamp(8px, 3vw, 20px); }
+#overflow-up-btn { right: clamp(56px, 14vw, 70px); }
+
+/* ─── CONTROLS ──────────────────────────────────────────────────── */
+.controls {
+  padding: clamp(8px, 2.5vw, 10px) clamp(12px, 3.5vw, 16px);
+  margin: 4px;
+  background: #4B0082;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(16px, 4.5vw, 18px);
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── SECTION EDITOR (horizontal layout → stacked on mobile) ────── */
+.section-editor {
+  display: flex;
+  flex-direction: column;   /* Stack on mobile */
+  gap: clamp(12px, 3vw, 20px);
+  background: #ffffff;
+  padding: clamp(12px, 3.5vw, 16px);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border-left: 6px solid #2F2F2F;
+}
+
+/* Side-by-side only when there is enough room */
+@media (min-width: 600px) {
+  .section-editor {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .section-editor .left-col  { width: 30%; min-width: 200px; }
+  .section-editor .right-col { width: 70%; }
+}
+
+.section-editor .left-col,
+.section-editor .right-col {
+  width: 100%;
+}
+
+.section-editor label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.section-editor input,
+.section-editor select {
+  width: 100%;
+  padding: clamp(6px, 2vw, 8px);
+  margin-bottom: 12px;
+  font-size: clamp(14px, 4vw, 16px);
+  /* Prevent iOS from zooming in on focus (needs ≥16 px) */
+  font-size: max(16px, 1em);
+  box-sizing: border-box;
+}
+
+.section-editor textarea.sec-text {
+  width: 100%;
+  height: clamp(120px, 30vw, 180px);
+  padding: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: max(16px, 15px); /* ≥16 px prevents iOS auto-zoom */
+}
+
+.section-editor button {
+  background: #8B0000;
+  color: white;
+  border: none;
+  padding: clamp(6px, 2vw, 8px) clamp(10px, 3vw, 12px);
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent drag conflicts on touch */
+.section-editor input,
+.section-editor select,
+.section-editor textarea,
+.section-editor button {
+  -webkit-user-drag: none;
+  touch-action: manipulation;
+}
+
+/* ─── ADD BUTTONS ───────────────────────────────────────────────── */
+#add-section-btn,
+#add-task-btn,
+#add-checklist-section-btn {
+  background: #0B4F2C;
+  color: white;
+  padding: clamp(8px, 2.5vw, 10px) clamp(12px, 3.5vw, 14px);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: clamp(14px, 4vw, 16px);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── VALIDATION ────────────────────────────────────────────────── */
+.forbidden-warning {
+  color: #8B0000;
+  font-size: 14px;
+  margin-top: 6px;
+  display: none;
+}
+
+.sec-text.forbidden,
+.task-text.forbidden {
+  border: 2px solid #8B0000 !important;
+  background: #ffecec;
+}
+
+/* ─── EMERGENCY TIMER ───────────────────────────────────────────── */
+#emergency-timer {
+  position: relative;
+  top: 0;
+  left: clamp(0px, 10vw, 200px); /* Shrinks on narrow screens */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(15vw, 20vw, 25vw);
+  font-weight: 700;
+  color: rgba(10, 10, 10, 0.12);
+  text-shadow: 0 0 25px rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+body.darkmode #emergency-timer {
+  color: #111;
+  background: transparent;
+}
+
+#timer-display {
+  font-family: "Courier New", monospace;
+  letter-spacing: 0.1em;
+}
+
+/* ─── DARK MODE ─────────────────────────────────────────────────── */
+body.darkmode {
+  background: #111;
+  color: #eee;
+}
+
+body.darkmode header               { background: #000; color: #fff; }
+body.darkmode #content             { background: #111; }
+body.darkmode .emergency-btn       { background: #222; color: #fff; }
+body.darkmode .controls            { background: #333; color: #fff; }
+body.darkmode #overflow-btn,
+body.darkmode #overflow-up-btn     { background: #444; color: #fff; }
+body.darkmode .section-block       { border-left-color: #666; }
+
+/* ─── TOGGLE SWITCH ─────────────────────────────────────────────── */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  transition: .3s;
+  border-radius: 26px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider             { background-color: #4B0082; }
+.switch input:checked + .slider:before      { transform: translateX(24px); }
+
+/* ─── SWITCH ROW ────────────────────────────────────────────────── */
+.darkmode-label {
+  font-size: clamp(13px, 3.5vw, 18px);
+  vertical-align: middle;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.switches-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 25px;
+  margin-bottom: 10px;
+}
+
+.switch-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 56px;
+}
+
+@media (max-width: 420px) {
+  .switch-item {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .darkmode-label {
+    font-size: 13px;
+    text-align: center;
+  }
+}
+
+/* ─── TEXTAREA COLOURS ──────────────────────────────────────────── */
+.sec-text,
+.task-text {
+  color: #000 !important;
+  background: #fff;
+}
+
+body.darkmode .sec-text,
+body.darkmode .task-text {
+  color: #fff !important;
+  background: #222;
+}
+
+/* ─── OVERDUE TASKS ─────────────────────────────────────────────── */
+.task-overdue {
+  border-left-color: #8B0000 !important;
+  background: #fff0f0;
+}
+
+/* ─── CHECKLIST SECTION ROWS ────────────────────────────────────── */
+.checklist-section-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap; /* Wrap on narrow screens */
+}
+
+.checklist-section-row input,
+.checklist-section-row select {
+  padding: 6px;
+  font-size: max(16px, 1em); /* Prevent iOS zoom */
+}
+
+.checklist-section-row-name  { flex: 1; min-width: 120px; }
+.checklist-section-row-color { width: clamp(100px, 30vw, 140px); }
+
+.checklist-section-row button {
+  background: #8B0000;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── TASK EDITOR BLOCK ─────────────────────────────────────────── */
+.task-editor-block {
+  background: #ffffff;
+  padding: clamp(12px, 3.5vw, 16px);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border-left: 6px solid #2F2F2F;
+}
+
+.task-editor-block label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.task-editor-block textarea.task-text {
+  width: 100%;
+  height: 40px;
+  padding: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: max(16px, 15px);
+  margin-bottom: 10px;
+}
+
+.task-editor-line2 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.task-editor-line2 select,
+.task-editor-line2 input {
+  padding: 6px;
+  font-size: max(16px, 1em);
+}
+
+.task-editor-section-select  { min-width: clamp(120px, 35vw, 160px); }
+.task-editor-req-select       { min-width: clamp(150px, 45vw, 200px); }
+
+.task-editor-interval-wrapper {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-editor-interval-wrapper input { width: 70px; }
+
+.task-editor-delete-btn {
+  margin-left: auto;
+  background: #8B0000;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── DRAG HANDLES ──────────────────────────────────────────────── */
+.section-drag-handle,
+.proto-drag-handle {
+  cursor: grab;
+  font-size: 20px;
+  padding: 4px 8px;
+  user-select: none;
+  align-self: center;
+  color: #888;
+  /* Larger touch area */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.checklist-section-row.dragging,
+.section-editor.dragging {
+  opacity: 0.4;
+}
+
+.section-editor.dragging { outline: 2px dashed #4B0082; }
+
+.check-drag-indicator {
+  height: 3px;
+  background: #4B0082;
+  border-radius: 2px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+
+/* ─── BANNER / MODE ICONS ───────────────────────────────────────── */
+.banner-icons,
+.banner-micro,
+strong {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.banner-icons  { font-size: 18px; margin-right: 6px; vertical-align: middle; }
+.banner-micro  { font-size: 12px; margin-top: 3px; opacity: 0.75; }
+
+.mode-banner,
+#mode-banner-home,
+#mode-banner-viewer,
+.mode-banner strong,
+.mode-banner .banner-icons,
+.mode-banner .banner-micro {
+  color: #000 !important;
+}
+
+/* ─── SECTION INDICATOR ─────────────────────────────────────────── */
+:root { --indicator-text: #000; }
+body.darkmode { --indicator-text: #fff; }
+
+#section-indicator {
+  font-size: clamp(12px, 3.5vw, 14px);
+  font-weight: bold;
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  text-align: right;
+  background: #f5f5f5;
+  color: var(--indicator-text);
+}
+
+body.darkmode #section-indicator { background: #111; }
+
+/* ─── MODAL OVERLAY ─────────────────────────────────────────────── */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  /* Safe area padding for notched phones */
+  padding: env(safe-area-inset-top)
+           env(safe-area-inset-right)
+           env(safe-area-inset-bottom)
+           env(safe-area-inset-left);
+}
+
+#modal-overlay.visible { display: flex; }
+
+#modal-box {
+  background: #fff;
+  border-radius: 10px;
+  padding: clamp(18px, 5vw, 28px) clamp(16px, 4.5vw, 24px) clamp(14px, 4vw, 20px);
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+body.darkmode #modal-box { background: #222; color: #eee; }
+
+#modal-title   { font-size: clamp(17px, 5vw, 19px); font-weight: bold; margin-bottom: 10px; }
+#modal-message { font-size: clamp(16px, 4.5vw, 17px); line-height: 1.5; margin-bottom: 20px; white-space: pre-wrap; }
+
+#modal-buttons { display: flex; flex-direction: column; gap: 10px; }
+
+#modal-buttons button {
+  padding: clamp(10px, 3vw, 11px) 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: clamp(16px, 4.5vw, 17px);
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── POINTER EVENTS (drag fix) ─────────────────────────────────── */
+.checklist-section-row * { pointer-events: auto; }
+.section-drag-handle     { pointer-events: auto; }
+
+/* ─── HOME BUTTON ───────────────────────────────────────────────── */
+#btn-home {
+  padding: clamp(8px, 2.5vw, 10px) clamp(10px, 3vw, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#btn-home svg { vertical-align: middle; }
+</style>
+</head>
+
+<body>
+
+<header style="user-select:none;-webkit-user-select:none;">Emergència</header>
+
+<!-- PANTALLA 1: LLISTA D'EMERGÈNCIES -->
+<div id="screen-emergencies" class="screen">
+   <div class="switches-row">
+
+    <!-- Mode fosc -->
+    <div class="switch-item">
+      <label class="switch">
+        <input type="checkbox" id="darkmode-switch" onchange="toggleDarkMode()">
+        <span class="slider"></span>
+      </label>
+      <span class="darkmode-label">Mode fosc</span>
+    </div>
+
+    <!-- Mode silenciós -->
+    <div class="switch-item">
+      <label class="switch">
+        <input type="checkbox" id="silent-mode" onchange="toggleSilentMode()">
+        <span class="slider"></span>
+      </label>
+      <span class="darkmode-label">Mode silenciós</span>
+    </div>
+
+    <!-- Mode mans lliures -->
+    <div class="switch-item">
+      <label class="switch">
+        <input type="checkbox" id="voice-toggle" onchange="toggleVoiceSwitch()">
+        <span class="slider"></span>
+      </label>
+      <span class="darkmode-label">Mode mans lliures</span>
+    </div>
+
+  </div>
+
+  <div style="margin-top:15px;margin-bottom:10px;user-select:none;-webkit-user-select:none;">
+    <strong>Filtre:</strong>
+    <label style="cursor:pointer;"><input type="radio" name="filter-mode" value="all" checked onchange="renderEmergencyList()"> Totes</label>
+    <label style="cursor:pointer;"><input type="radio" name="filter-mode" value="protocol" onchange="renderEmergencyList()"> Protocol</label>
+    <label style="cursor:pointer;"><input type="radio" name="filter-mode" value="checklist" onchange="renderEmergencyList()"> Checklist</label>
+  </div>
+
+  <!-- Punt 2: Banner indicadors de mode (pantalla inici) -->
+  <div id="mode-banner-home" style="display:none;padding:8px 14px;border-radius:6px;margin-bottom:10px;font-size:14px;line-height:1.5;"></div>
+
+  <!-- Punt 5: Banner checklist en progrés -->
+  <div id="checklist-progress-banner"
+       onclick="resumeChecklistInProgress()"
+       style="display:none;background:#003366;color:#fff;padding:10px 14px;border-radius:6px;
+              margin-bottom:10px;font-size:15px;cursor:pointer;"></div>
+
+  <div id="emergency-list"></div>
+
+  <button onclick="openEditor()" style="margin-top:20px;background:#0B4F2C;color:white;padding:12px 16px;border:none;border-radius:6px;font-size:16px;">
+    Modificar
+  </button>
+
+  <button onclick="exportEmergencies()" 
+          style="margin-top:10px;background:#4B0082;color:white;padding:12px 16px;border:none;border-radius:6px;font-size:16px;">
+    Exportar
+  </button>
+
+  <button onclick="document.getElementById('import-file').click()" 
+          style="margin-top:10px;background:#CC5500;color:white;padding:12px 16px;border:none;border-radius:6px;font-size:16px;">
+    Importar
+  </button>
+
+  <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importEmergencies(event)">
+</div>
+
+<!-- PANTALLA 2: VISUALITZACIÓ -->
+<div id="screen-viewer" class="screen">
+  <button id="btn-home" class="controls" onclick="goHome()" title="Inici">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3l9 8h-3v9h-12v-9h-3l9-8z"/>
+    </svg>
+  </button>
+  <!-- Punt 2: Banner indicadors de mode (pantalla viewer) -->
+  <div id="mode-banner-viewer" style="display:none;padding:8px 14px;border-radius:6px;margin-bottom:8px;font-size:14px;line-height:1.5;"></div>
+  <h2 id="viewer-title"></h2>
+  <!-- Punt 4: Indicador de secció/tasques -->
+  <div id="section-indicator" style="display:none;"></div>
+
+
+  <div id="content">
+    <div id="emergency-timer">
+      <span id="timer-display">00:00</span>
+    </div>
+
+    <div id="section-container"></div>
+    
+    <div id="timer-sync-buttons">
+      <button data-shift="30">+30''</button>
+      <button data-shift="10">+10''</button>
+      <button data-shift="-10">-10''</button>
+      <button data-shift="-30">-30''</button>
+    </div>
+
+    <div id="overflow-btn" onclick="scrollDown()">>></div>
+    <div id="overflow-up-btn" onclick="scrollUp()"><<</div>
+  </div>
+
+  <div class="section-buttons">
+    <!-- Botons protocol -->
+    <button onclick="prevSection()" class="controls" id="btn-prev">⟵ Enrere</button>
+    <button onclick="nextSection()" class="controls" id="btn-next">Endavant ⟶</button>
+
+    <!-- Botons checklist -->
+    <button onclick="taskDone()" class="controls" id="btn-done" style="display:none;">✔ Fet</button>
+    <button onclick="skipTask()" class="controls" id="btn-skip" style="display:none;">Següent ⟶</button>
+    <button onclick="toggleReading()" id="read-btn" class="controls">🔊 Llegir</button>
+    <button onclick="repeatReading()" class="controls">🔁 Repetir</button>
+    <button onclick="toggleVoiceButton()" id="voice-btn" class="controls">🎤 Veu OFF</button>
+      <!-- NOU -->
+  <button onclick="finishEmergency()" class="controls" id="btn-finish">Finalitzar</button>
+  </div>
+</div>
+
+<!-- PANTALLA 3: EDITOR -->
+<div id="screen-editor" class="screen">
+  <button id="btn-home" class="controls" onclick="goHome()" title="Inici">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3l9 8h-3v9h-12v-9h-3l9-8z"/>
+    </svg>
+  </button>
+  <h2>Editor d’emergències</h2>
+
+  <label>Selecciona emergència</label>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    <select id="emergency-select" onchange="loadEmergencyIntoEditor()" style="flex:1;padding:6px;font-size:15px;"></select>
+    <button id="btn-delete-emergency" onclick="deleteEmergency()"
+      style="background:#8B0000;color:white;padding:8px 14px;border:none;border-radius:6px;font-size:15px;cursor:pointer;display:none;">
+      Eliminar
+    </button>
+  </div>
+
+  <label>Nom de l’emergència</label>
+  <input id="edit-name">
+
+  <div style="margin-top:10px;margin-bottom:10px;">
+    <strong>Mode d’emergència:</strong><br>
+    <label>
+      <input type="radio" name="edit-mode" value="protocol" checked onchange="changeEditMode()"> Protocol
+    </label>
+    <label style="margin-left:15px;">
+      <input type="radio" name="edit-mode" value="checklist" onchange="changeEditMode()"> Checklist
+    </label>
+  </div>
+
+  <!-- Editor PROTOCOL -->
+  <div id="protocol-editor">
+    <h3>Seccions</h3>
+    <div id="sections-editor"></div>
+    <button id="add-section-btn" onclick="addSectionEditor()">+ Afegir secció</button>
+  </div>
+
+  <!-- Editor CHECKLIST -->
+  <div id="checklist-editor" style="display:none;">
+    <h3>Seccions del checklist</h3>
+    <div id="checklist-sections-editor"></div>
+    <button id="add-checklist-section-btn" onclick="addChecklistSectionEditor()">+ Afegir secció</button>
+
+    <h3 style="margin-top:20px;">Tasques</h3>
+    <div id="tasks-editor"></div>
+    <button id="add-task-btn" onclick="addTaskEditor()">+ Afegir tasca</button>
+  </div>
+
+  <br><br>
+  <button onclick="saveEmergency()" style="background:#003366;color:white;padding:12px 16px;border:none;border-radius:6px;font-size:16px;">
+    Desar emergència
+  </button>
+</div>
+
+<!-- MODAL DIÀLEG PERSONALITZAT -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div id="modal-title"></div>
+    <div id="modal-message"></div>
+    <div id="modal-buttons"></div>
+  </div>
+</div>
+
+<script>
+let autoReadEnabled = true;
+let silentMode = false;
+
+// SANITITZACIÓ: evita injeccions XSS quan s'insereix text d'usuari via innerHTML
+function sanitize(str) {
+  const d = document.createElement("div");
+  d.textContent = str || "";
+  return d.innerHTML;
+}
+
+const STORAGE_KEY = "emergencies_obstetriques";
+
+function defaultEmergencies() {
+  return [
+    {
+      id: "eclampsia",
+      name: "Eclàmpsia +protocol",
+      mode: "protocol",
+      sections: [
+        { title: "Activació inicial", text: "DEMANAR AJUDA\n- Busca emergència obstètrica\nPROTEGIR LA PACIENT\n- Evitar traumatismes\n- Decúbit lateral esquerre", color: "red" },
+        { title: "Reanimació – ABCD", text: "A – VIA AÈRIA\n- Assegurar via aèria (aspiració faríngia)\nB – RESPIRACIÓ\n- Comprovar respiració espontània\n- Oxigenoteràpia (0,6 litres/minut)\n- Ventilació amb ambú, si cal\n- Monitorització: Saturació oxigen\nC – CIRCULACIÓ\n- 2 vies venoses ≥18 Gauges\n- Analítica completa (hemograma, coagulació, funció hepàtica i renal)\n- Cursar reserva de sang\n- Sondatge vesical\nD – DISCAPACITAT\n- Nivell de consciència\n- Reactivitat pupil·lar", color: "blue" },
+        { title: "Control de les convulsions", text: "Sulfat de magnesi\n- Bolus inicial: 4,5 grams\n- Si resposta → Perfusió 2 grams/hora\n- Si NO resposta → Segon bolus 2 grams\n- Si NO resposta → Diazepam 10 mg endovenós\n- Si NO resposta → Fenitoïna 15 mg/kg", color: "purple" },
+        { title: "Control tensional", text: "Labetalol endovenós\n- Bolus 20 mg\n- Perfusió 50–400 mg cada 6 hores\n\nHidralazina endovenós\n- Bolus 5 mg\n- Perfusió 3–7 mg/h", color: "orange" },
+        { title: "Valoració fetal", text: "COMPROVAR BENESTAR FETAL", color: "green" }
+      ],
+      checklistSections: []
+    }
+  ];
+}
+
+function loadEmergencies() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return defaultEmergencies();
+  try {
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data)) return defaultEmergencies();
+    return data;
+  } catch {
+    return defaultEmergencies();
+  }
+}
+
+function saveEmergencies() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(emergencies));
+}
+
+let _saveDebounceTimer = null;
+function saveEmergenciesDebounced() {
+  clearTimeout(_saveDebounceTimer);
+  _saveDebounceTimer = setTimeout(saveEmergencies, 300);
+}
+
+let emergencies = loadEmergencies();
+let current = null;
+let sectionIndex = 0;
+let utterance = null;
+
+// Checklist pointers
+let currentTaskPointer = null; // {secIndex, taskIndex}
+let taskLastAlert = {};
+
+// PANTALLES
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
+}
+
+function goHome() {
+  stopReading();
+  // Atura el micròfon però sense canviar l'estat del toggle de mode mans lliures
+  try { if (recognition) recognition.stop(); } catch(e) {}
+  voiceActive = false;
+  const btn = document.getElementById("voice-btn");
+  if (btn) { btn.textContent = "🎤 Veu OFF"; btn.style.background = "#4B0082"; }
+  showScreen("screen-emergencies");
+  renderEmergencyList();
+  stopEmergencyTimer();
+}
+
+// LLISTA EMERGÈNCIES
+
+function renderEmergencyList() {
+  const list = document.getElementById("emergency-list");
+  list.innerHTML = "";
+
+  const filter = document.querySelector('input[name="filter-mode"]:checked')?.value || "all";
+
+  // Punt 3: Ordenar per freqüència d'ús descendent
+  const sorted = [...emergencies].sort((a, b) => getUsageCount(b.id) - getUsageCount(a.id));
+
+  sorted.forEach(e => {
+    const mode = e.mode || "protocol";
+    if (filter !== "all" && mode !== filter) return;
+
+    const btn = document.createElement("button");
+    btn.className = "emergency-btn";
+    btn.textContent = e.name;
+    btn.onclick = () => openEmergency(e.id);
+    list.appendChild(btn);
+  });
+
+  // Punt 2 i 5: Actualitzar banners pantalla inici
+  updateModeBanner();
+  updateChecklistProgressBanner();
+}
+
+// OBERTURA EMERGÈNCIA
+
+function resetChecklistDone(e) {
+  if (!e.checklistSections) return;
+  e.checklistSections.forEach(sec => {
+    (sec.tasks || []).forEach(t => {
+      t.done = false;
+      t._overdue = false;
+    });
+  });
+}
+
+function openEmergency(id) {
+  current = emergencies.find(e => e.id === id);
+  sectionIndex = 0;
+  currentTaskPointer = null;
+  taskLastAlert = {};
+  updateFinishButtonVisibility();
+  // Punt 3: Incrementar comptador d'ús
+  incrementUsageCount(id);
+  // Punt 5: Sobreescriure qualsevol progrés anterior (sense avís)
+  clearChecklistProgress();
+  showScreen("screen-viewer");
+  // Activar el micròfon només si l'interruptor de mode mans lliures és ON
+  const handsfree = document.getElementById("voice-toggle").checked;
+  toggleVoiceControl(handsfree);
+  // 🔥 Tornar a mostrar rellotge i botons del comptador
+  stopEmergencyTimer();   // ← Atura qualsevol comptador antic
+  timerSeconds = 0;       // ← Reinicia el valor
+  document.getElementById("emergency-timer").style.display = "block";
+  document.getElementById("timer-sync-buttons").style.display = "flex";
+
+  const mode = current.mode || "protocol";
+
+  document.getElementById("btn-prev").style.display = (mode === "protocol") ? "inline-block" : "none";
+  document.getElementById("btn-next").style.display = (mode === "protocol") ? "inline-block" : "none";
+  document.getElementById("btn-done").style.display = (mode === "checklist") ? "inline-block" : "none";
+  document.getElementById("btn-skip").style.display = (mode === "checklist") ? "inline-block" : "none";
+  document.getElementById("btn-finish").style.display = "none"; // renderChecklist l’activarà si cal
+
+  if (mode === "protocol") {
+    renderSection();
+  } else {
+    resetChecklistDone(current);
+    currentTaskPointer = getNextPendingTaskPointer(null);
+    renderChecklist();
+  }
+
+  autoReadEnabled = !silentMode;
+  if (autoReadEnabled) {
+    setTimeout(() => readSection(), 150);
+  }
+
+  updateModeBanner();
+  updateSectionIndicator();
+  startEmergencyTimer();
+}
+
+// RENDER PROTOCOL
+
+function renderSection() {
+  const title = document.getElementById("viewer-title");
+  const container = document.getElementById("section-container");
+  const overflowBtn = document.getElementById("overflow-btn");
+
+  title.textContent = current.name;
+
+  const sec = current.sections[sectionIndex];
+  const html = `
+    <div class="section-block ${sanitize(sec.color)}">
+      <h3>${sanitize(sec.title)}</h3>
+      ${sanitize(sec.text).replace(/\n/g, "<br>")}
+    </div>
+  `;
+  container.innerHTML = html;
+  updateOverflowButton();
+  updateSectionIndicator();
+  setTimeout(() => {
+    overflowBtn.style.display =
+      container.scrollHeight > container.clientHeight ? "block" : "none";
+  }, 50);
+}
+
+// RENDER CHECKLIST (seccions + tasques)
+
+function renderChecklist() {
+  const title = document.getElementById("viewer-title");
+  const container = document.getElementById("section-container");
+  title.textContent = current.name;
+
+  updateFinishButtonVisibility();
+  const sections = current.checklistSections || [];
+  let html = "";
+  let anyPending = false;
+
+  sections.forEach((sec, sIdx) => {
+    const pendingTasks = [];
+    (sec.tasks || []).forEach((t, realIndex) => {
+      if (!t.done) pendingTasks.push({ t, realIndex });
+    });
+    if (pendingTasks.length === 0) return;
+
+    anyPending = true;
+    html += `<div class="section-block ${sanitize(sec.color || "")}">
+      <h3>${sanitize(sec.title)}</h3>
+    `;
+
+    pendingTasks.forEach(({ t, realIndex }) => {
+      let reqText = "Opcional";
+      if (t.requirement === "mandatory") reqText = "Obligatori";
+      if (t.requirement === "interval") reqText = `Obligatori cada ${t.interval} min`;
+
+      const overdueClass = t._overdue ? "task-overdue" : "";
+
+      const isFocused =
+        currentTaskPointer &&
+        currentTaskPointer.secIndex === sIdx &&
+        currentTaskPointer.taskIndex === realIndex;
+
+      const textHtml = sanitize(t.text || "").replace(/\n/g, "<br>");
+      const displayText = isFocused ? `<strong>${textHtml}</strong>` : textHtml;
+
+      html += `
+        <div class="${overdueClass}" data-sec-index="${sIdx}" data-task-index="${realIndex}" style="margin-left:10px;margin-bottom:8px;">
+          <p>☐ ${displayText}<em> ${reqText}</em></p>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  });
+  if (!anyPending) {
+    html = `<div class="section-block"><h3>✔ Totes les tasques completades</h3><p>Prem <strong>Finalitzar</strong> per veure el resum.</p></div>`;
+  }
+
+  container.innerHTML = html;
+  updateOverflowButton();
+  updateFinishButtonVisibility();
+  updateSectionIndicator();
+
+  setTimeout(() => {
+    if (currentTaskPointer) {
+      const selector = `[data-sec-index="${currentTaskPointer.secIndex}"][data-task-index="${currentTaskPointer.taskIndex}"]`;
+      const el = document.querySelector(selector);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 50);
+
+  
+}
+
+// SCROLL
+
+function scrollDown() {
+  stopAutoScroll();
+  const container = document.getElementById("section-container");
+  container.scrollBy({ top: 200, behavior: "smooth" });
+}
+
+function scrollUp() {
+  stopAutoScroll();
+  const container = document.getElementById("section-container");
+  container.scrollBy({ top: -200, behavior: "smooth" });
+}
+
+let autoScrollRaf = null;
+
+function startAutoScroll() {
+  const container = document.getElementById("section-container");
+  const downBtn = document.getElementById("overflow-btn");
+  if (downBtn.style.display !== "block") return;
+  stopAutoScroll();
+  function step() {
+    container.scrollTop += 1;
+    autoScrollRaf = requestAnimationFrame(step);
+  }
+  autoScrollRaf = requestAnimationFrame(step);
+}
+
+function stopAutoScroll() {
+  if (autoScrollRaf) {
+    cancelAnimationFrame(autoScrollRaf);
+    autoScrollRaf = null;
+  }
+}
+
+function updateOverflowButton() {
+  const container = document.getElementById("section-container");
+  const downBtn = document.getElementById("overflow-btn");
+  const upBtn = document.getElementById("overflow-up-btn");
+
+  const needsScroll = container.scrollHeight > container.clientHeight;
+
+  downBtn.style.display = needsScroll ? "block" : "none";
+  upBtn.style.display = needsScroll ? "block" : "none";
+}
+
+// NAVEGACIÓ PROTOCOL
+
+function nextSection() {
+  if (!current || (current.mode || "protocol") !== "protocol") return;
+  if (sectionIndex < current.sections.length - 1) {
+    sectionIndex++;
+    stopReading();
+    stopAutoScroll();
+    renderSection();
+    if (autoReadEnabled) readSection();
+    startAutoScroll();
+  }
+}
+
+function prevSection() {
+  if (!current || (current.mode || "protocol") !== "protocol") return;
+  if (sectionIndex > 0) {
+    sectionIndex--;
+    stopReading();
+    stopAutoScroll();
+    renderSection();
+    if (autoReadEnabled) readSection();
+    startAutoScroll();
+  }
+}
+
+// LECTURA
+
+let rereadTimeout = null;
+let readingActive = false;
+
+function toggleReading(forceOn = null) {
+  const btn = document.getElementById("read-btn");
+
+  // --- Determinar nou estat ---
+  if (forceOn === true) {
+    readingActive = true;
+  } else if (forceOn === false) {
+    readingActive = false;
+  } else {
+    readingActive = !readingActive;
+  }
+
+  // --- Aplicar estat ---
+  if (readingActive) {
+    // Si estem en mode silenciós → no llegim, però mantenim estat OFF
+    if (silentMode) {
+      readingActive = false;
+      if (btn) { btn.textContent = "🔊 Llegir"; btn.style.background = "#4B0082"; }
+      return;
+    }
+
+    // Activar lectura
+    readSection();
+
+    if (btn) {
+      btn.textContent = "🔇 Aturar";
+      btn.style.background = "#8B0000";   // color d'estat actiu
+    }
+
+  } else {
+    // Aturar lectura
+    stopReading();
+
+    if (btn) {
+      btn.textContent = "🔊 Llegir";
+      btn.style.background = "#4B0082";   // color d'estat inactiu
+    }
+  }
+}
+
+
+function readSection() {
+  readingActive = true;
+  const btn = document.getElementById("read-btn");
+  if (btn) {
+    btn.textContent = "🔇 Aturar";
+    btn.style.background = "#8B0000";
+  }
+  if (utterance) speechSynthesis.cancel();
+  stopAutoScroll();
+
+  // 🔥 Mode silenciós → no llegim, però retornem Promise perquè el flux continuï
+  if (silentMode) return Promise.resolve(true);
+
+  // 🔥 Lectura automàtica desactivada → no llegim, però retornem Promise
+  if (!autoReadEnabled) return Promise.resolve(true);
+  if (!current) return Promise.resolve(true);
+
+  const mode = current.mode || "protocol";
+
+  if (mode === "protocol") {
+    const sec = current.sections[sectionIndex];
+    const text = `${sec.title}. ${sec.text}`;
+    utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "ca-ES";
+
+    utterance.onend = () => {
+      if (sectionIndex < current.sections.length - 1) {
+        sectionIndex++;
+        renderSection();
+        if (autoReadEnabled && !silentMode) readSection();
+        startAutoScroll();
+      }
+    };
+
+    speechSynthesis.speak(utterance);
+    return Promise.resolve(true);
+  }
+
+  // MODE CHECKLIST
+  if (!currentTaskPointer) {
+    currentTaskPointer = getNextPendingTaskPointer(null);
+    if (!currentTaskPointer) return Promise.resolve(true);
+  }
+
+  const t = current.checklistSections[currentTaskPointer.secIndex]
+    .tasks[currentTaskPointer.taskIndex];
+
+  const text = t.text || "";
+  utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ca-ES";
+
+  const thisPtr = { ...currentTaskPointer };
+  if (rereadTimeout) clearTimeout(rereadTimeout);
+
+  utterance.onend = () => {
+    rereadTimeout = setTimeout(() => {
+      const same =
+        current &&
+        current.mode === "checklist" &&
+        currentTaskPointer &&
+        currentTaskPointer.secIndex === thisPtr.secIndex &&
+        currentTaskPointer.taskIndex === thisPtr.taskIndex &&
+        !current.checklistSections[thisPtr.secIndex].tasks[thisPtr.taskIndex].done;
+
+      if (same && autoReadEnabled && !silentMode) {
+        readSection();
+      }
+    }, 5000);
+  };
+
+  speechSynthesis.speak(utterance);
+  return Promise.resolve(true);
+}
+
+function stopReading() {
+  readingActive = false;
+
+  const btn = document.getElementById("read-btn");
+  if (btn) {
+    btn.textContent = "🔊 Llegir";
+    btn.style.background = "#4B0082";
+  }
+
+  if (utterance) speechSynthesis.cancel();
+  stopAutoScroll();
+  if (rereadTimeout) {
+    clearTimeout(rereadTimeout);
+    rereadTimeout = null;
+  }
+}
+
+function repeatReading() {
+  window.speechSynthesis.cancel();
+  stopAutoScroll();
+  autoReadEnabled = true;
+  readSection();
+  startAutoScroll();
+}
+
+// CHECKLIST: utilitats
+
+function getNextPendingTaskPointer(fromPtr) {
+  if (!current || !current.checklistSections) return null;
+  const sections = current.checklistSections;
+
+  let startSec = 0;
+  let startTask = 0;
+
+  if (fromPtr && typeof fromPtr.secIndex === "number" && typeof fromPtr.taskIndex === "number") {
+    startSec = fromPtr.secIndex;
+    startTask = fromPtr.taskIndex + 1;
+  }
+
+  for (let s = startSec; s < sections.length; s++) {
+    const tasks = sections[s].tasks || [];
+    for (let t = (s === startSec ? startTask : 0); t < tasks.length; t++) {
+      if (!tasks[t].done) return { secIndex: s, taskIndex: t };
+    }
+  }
+
+  // si no hi ha més, torna a l'inici
+  for (let s = 0; s < sections.length; s++) {
+    const tasks = sections[s].tasks || [];
+    for (let t = 0; t < tasks.length; t++) {
+      if (!tasks[t].done) return { secIndex: s, taskIndex: t };
+    }
+  }
+
+  return null;
+}
+
+// CHECKLIST: accions
+function taskDone() {
+  if (!current || (current.mode || "protocol") !== "checklist") return;
+  if (!currentTaskPointer) {
+    currentTaskPointer = getNextPendingTaskPointer(null);
+    if (!currentTaskPointer) return;
+  }
+
+  const sec = current.checklistSections[currentTaskPointer.secIndex];
+  const t = sec.tasks[currentTaskPointer.taskIndex];
+  t.done = true;
+  t._overdue = false;
+  t.completedAtSeconds = timerSeconds;
+  updateFinishButtonVisibility()
+  saveEmergenciesDebounced();
+
+  // 🔥 Comprovem si hi ha tasques overdue i si cal canviar focus
+  const focusChanged = checkTaskIntervals();  // ⬅️ IMPORTANT: ara retorna true/false
+
+  // 🔥 Si NO hi ha tasques overdue → lògica normal
+  if (!focusChanged) {
+    currentTaskPointer = getNextPendingTaskPointer(currentTaskPointer);
+  }
+
+  renderChecklist();
+  updateSectionIndicator();
+  if (currentTaskPointer) readSection();
+}
+
+function skipTask() {
+  if (!current || (current.mode || "protocol") !== "checklist") return;
+  if (!currentTaskPointer) {
+    currentTaskPointer = getNextPendingTaskPointer(null);
+  } else {
+    currentTaskPointer = getNextPendingTaskPointer(currentTaskPointer);
+  }
+  if (currentTaskPointer) {
+    renderChecklist();
+    updateSectionIndicator();
+    if (autoReadEnabled) readSection();
+  }
+}
+
+// EDITOR
+
+function openEditor() {
+  showScreen("screen-editor");
+  loadEditorList();
+}
+
+function loadEditorList() {
+  const select = document.getElementById("emergency-select");
+  select.innerHTML = "";
+
+  emergencies.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.id;
+    opt.textContent = e.name;
+    select.appendChild(opt);
+  });
+
+  const optNew = document.createElement("option");
+  optNew.value = "new";
+  optNew.textContent = "Nova emergència";
+  select.appendChild(optNew);
+
+  loadEmergencyIntoEditor();
+  updateDeleteButton();
+}
+
+async function changeEditMode() {
+  const newMode = document.querySelector('input[name="edit-mode"]:checked').value;
+  const oldMode = newMode === "checklist" ? "protocol" : "checklist";
+  const protoDiv = document.getElementById("protocol-editor");
+  const checkDiv = document.getElementById("checklist-editor");
+
+  // Detectar si hi ha contingut actual a l'editor que es pugui convertir
+  const hasSections      = document.querySelectorAll("#sections-editor .section-editor").length > 0;
+  const hasCheckSections = document.querySelectorAll("#checklist-sections-editor .checklist-section-row").length > 0;
+  const hasContent = newMode === "checklist" ? hasSections : hasCheckSections;
+
+  // C: Netejar la terminació del nom per evitar dobles nomenclatures
+  const nameInput = document.getElementById("edit-name");
+  if (nameInput) {
+    nameInput.value = nameInput.value
+      .replace(/\s*\+?\s*(protocol|checklist)\s*$/i, "")
+      .trim();
+  }
+
+  if (hasContent) {
+    // B: Diàleg de 3 opcions amb botons personalitzats
+    const dir = newMode === "checklist" ? "Protocol → Checklist" : "Checklist → Protocol";
+    const opcio = await mostrarDialegConversio(dir);
+    // opcio: "convertir" | "nou" | "cancel"
+
+    if (opcio === "cancel") {
+      // Desfer: tornar al mode anterior sense canviar res
+      document.querySelector(`input[name="edit-mode"][value="${oldMode}"]`).checked = true;
+      return; // no canviem la visibilitat dels editors
+    }
+
+    if (opcio === "convertir") {
+      // A: Marcar l'editor com a "nova" emergència (la conversió crea un registre nou)
+      const selectEl = document.getElementById("emergency-select");
+      if (selectEl.value !== "new") {
+        selectEl.value = "new";
+      }
+      if (newMode === "checklist") {
+        convertProtocolToChecklist();
+      } else {
+        convertChecklistToProtocol();
+      }
+    } else {
+      // "nou": buidar contingut, nova emergència
+      document.getElementById("sections-editor").innerHTML = "";
+      document.getElementById("checklist-sections-editor").innerHTML = "";
+      document.getElementById("tasks-editor").innerHTML = "";
+      const selectEl = document.getElementById("emergency-select");
+      if (selectEl.value !== "new") selectEl.value = "new";
+      // E: si el nou mode és checklist, afegir Finalització per defecte
+      if (newMode === "checklist") {
+        // Diferim per assegurar que l'editor ja és visible
+        setTimeout(() => addFinalitzacioSection(), 0);
+      }
+    }
+  }
+
+  if (newMode === "protocol") {
+    protoDiv.style.display = "block";
+    checkDiv.style.display = "none";
+  } else {
+    protoDiv.style.display = "none";
+    checkDiv.style.display = "block";
+  }
+}
+
+// ── Modal genèric amb botons (B) ─────────────────────────────────────────────
+// Retorna una Promise que es resol amb el valor del botó clicat.
+function mostrarModal(titol, missatge, botons) {
+  return new Promise(resolve => {
+    const overlay  = document.getElementById("modal-overlay");
+    const titleEl  = document.getElementById("modal-title");
+    const msgEl    = document.getElementById("modal-message");
+    const btnsEl   = document.getElementById("modal-buttons");
+
+    titleEl.textContent  = titol;
+    msgEl.textContent    = missatge;
+    btnsEl.innerHTML     = "";
+
+    botons.forEach(b => {
+      const btn = document.createElement("button");
+      btn.textContent       = b.label;
+      btn.style.background  = b.color || "#003366";
+      btn.style.color       = "#fff";
+      btn.addEventListener("click", () => {
+        overlay.classList.remove("visible");
+        resolve(b.value);
+      });
+      btnsEl.appendChild(btn);
+    });
+
+    overlay.classList.add("visible");
+  });
+}
+
+// B: Diàleg de conversió de mode amb 3 botons
+async function mostrarDialegConversio(dir) {
+  return mostrarModal(
+    `Canvi de mode: ${dir}`,
+    "Què vols fer amb el contingut actual?",
+    [
+      { label: "Convertir — adapta el contingut al nou mode",  value: "convertir", color: "#003366" },
+      { label: "Crear de nou — buida l'editor",                value: "nou",       color: "#0B4F2C" },
+      { label: "Cancel·la — torna al mode anterior",           value: "cancel",    color: "#555"    },
+    ]
+  );
+}
+
+// ── Eliminar emergència (A) ──────────────────────────────────────────────────
+async function deleteEmergency() {
+  const id = document.getElementById("emergency-select").value;
+  if (!id || id === "new") return;
+
+  const em = emergencies.find(x => x.id === id);
+  if (!em) return;
+
+  const opcio = await mostrarModal(
+    "Eliminar emergència",
+    `Està segur que vol eliminar "${em.name}"?`,
+    [
+      { label: "Confirmar eliminació", value: "ok",     color: "#8B0000" },
+      { label: "Cancel·lar",           value: "cancel", color: "#555"    },
+    ]
+  );
+
+  if (opcio !== "ok") return;
+
+  emergencies = emergencies.filter(x => x.id !== id);
+  saveEmergencies();
+  loadEditorList(); // recarregar el selector
+}
+
+// Mostrar/amagar el botó Eliminar segons la selecció del desplegable
+function updateDeleteButton() {
+  const id  = document.getElementById("emergency-select").value;
+  const btn = document.getElementById("btn-delete-emergency");
+  if (btn) btn.style.display = (id && id !== "new") ? "inline-block" : "none";
+}
+
+// ── Secció Finalització per defecte (E) ─────────────────────────────────────
+// Totes les emergències checklist han de tenir una secció 'Finalització' al final
+// amb una tasca obligatoria 'Sincronització de cronòmetres'.
+function addFinalitzacioSection() {
+  const sectionRows = document.querySelectorAll("#checklist-sections-editor .checklist-section-row");
+  const numSections = sectionRows.length; // índex on anirà la nova secció
+  addChecklistSectionEditor("Finalització", "");
+  addTaskEditor("Sincronització de cronòmetres", "mandatory", 5, numSections);
+}
+
+// ── Conversió Protocol → Checklist ──────────────────────────────────────────
+// Cada secció de protocol es converteix en una secció de checklist del mateix
+// nom i color. Les línies del text que comencen per '- ' es converteixen en
+// tasques opcionals. El text anterior al primer guionet s'afegeix com a prefix
+// de la primera tasca trobada.
+function convertProtocolToChecklist() {
+  const sectionDivs = [...document.querySelectorAll("#sections-editor .section-editor")];
+
+  // Recollir dades actuals de l'editor de protocol
+  const protocolSections = sectionDivs.map(div => ({
+    title: div.querySelector(".sec-title").value.trim(),
+    text:  div.querySelector(".sec-text").value,
+    color: div.querySelector(".sec-color").value,
+  }));
+
+  // Buidar els editors de checklist
+  document.getElementById("checklist-sections-editor").innerHTML = "";
+  document.getElementById("tasks-editor").innerHTML = "";
+
+  protocolSections.forEach((sec, sIdx) => {
+    // Crear la secció de checklist
+    addChecklistSectionEditor(sec.title, sec.color);
+
+    // Parsejar el text: separar línies
+    const lines = sec.text.split("\n");
+    let pendingPrefix = "";
+    let firstTaskCreated = false;
+
+    lines.forEach(line => {
+      const stripped = line.trimEnd();
+      if (stripped.startsWith("- ")) {
+        // És una tasca
+        const taskText = pendingPrefix
+          ? pendingPrefix + "\n" + stripped.slice(2)
+          : stripped.slice(2);
+        pendingPrefix = "";
+        firstTaskCreated = true;
+        addTaskEditor(taskText, "optional", 5, sIdx);
+      } else if (stripped.length > 0) {
+        // Text que no és guionet: acumular com a prefix
+        pendingPrefix = pendingPrefix ? pendingPrefix + "\n" + stripped : stripped;
+      }
+    });
+
+    // Si no hi havia cap línia amb guionet, crear una tasca amb tot el text
+    if (!firstTaskCreated && pendingPrefix) {
+      addTaskEditor(pendingPrefix, "optional", 5, sIdx);
+    }
+  });
+
+  // Buidar l'editor de protocol (ja no cal)
+  document.getElementById("sections-editor").innerHTML = "";
+
+  // E: Afegir secció Finalització per defecte si no existeix ja
+  const secNames = [...document.querySelectorAll("#checklist-sections-editor .checklist-section-row-name")]
+    .map(i => i.value.trim().toLowerCase());
+  if (!secNames.includes("finalització")) {
+    addFinalitzacioSection();
+  }
+}
+
+// ── Conversió Checklist → Protocol ──────────────────────────────────────────
+// Cada secció de checklist es converteix en una secció de protocol del mateix
+// nom i color. Cada tasca es converteix en una línia '- text'.
+function convertChecklistToProtocol() {
+  const sectionRows = [...document.querySelectorAll("#checklist-sections-editor .checklist-section-row")];
+  const taskBlocks  = [...document.querySelectorAll("#tasks-editor .task-editor-block")];
+
+  // Recollir seccions
+  const sections = sectionRows.map((row, idx) => ({
+    title: row.querySelector(".checklist-section-row-name").value.trim() || "Secció",
+    color: row.querySelector(".checklist-section-row-color").value,
+    tasks: [],
+  }));
+
+  // Assignar cada tasca a la seva secció
+  taskBlocks.forEach(block => {
+    const text     = block.querySelector(".task-text").value.trim();
+    const secIndex = parseInt(block.querySelector(".task-editor-section-select").value) || 0;
+    if (sections[secIndex]) {
+      sections[secIndex].tasks.push(text);
+    }
+  });
+
+  // Buidar l'editor de protocol
+  document.getElementById("sections-editor").innerHTML = "";
+
+  // Crear seccions de protocol
+  sections.forEach(sec => {
+    const text = sec.tasks.map(t => `- ${t}`).join("\n");
+    addSectionEditor(sec.title, text, sec.color);
+  });
+
+  // Buidar els editors de checklist
+  document.getElementById("checklist-sections-editor").innerHTML = "";
+  document.getElementById("tasks-editor").innerHTML = "";
+}
+
+function loadEmergencyIntoEditor() {
+  const id = document.getElementById("emergency-select").value;
+  const nameInput = document.getElementById("edit-name");
+  const sectionsDiv = document.getElementById("sections-editor");
+  const checklistSectionsDiv = document.getElementById("checklist-sections-editor");
+  const tasksDiv = document.getElementById("tasks-editor");
+
+  sectionsDiv.innerHTML = "";
+  checklistSectionsDiv.innerHTML = "";
+  tasksDiv.innerHTML = "";
+
+  if (id === "new") {
+    nameInput.value = "";
+    document.querySelector('input[name="edit-mode"][value="protocol"]').checked = true;
+    updateDeleteButton();
+    changeEditMode();
+    return;
+  }
+
+  const e = emergencies.find(x => x.id === id);
+  nameInput.value = e.name
+    .replace(/\s*\+?\s*(protocol|checklist)\s*$/i, "")
+    .trim();
+  updateDeleteButton();
+
+  const mode = e.mode || "protocol";
+  document.querySelector(`input[name="edit-mode"][value="${mode}"]`).checked = true;
+  changeEditMode();
+
+  if (mode === "protocol") {
+    (e.sections || []).forEach(sec => {
+      addSectionEditor(sec.title, sec.text, sec.color);
+    });
+  } else {
+    (e.checklistSections || []).forEach(sec => {
+      addChecklistSectionEditor(sec.title, sec.color);
+    });
+    (e.checklistSections || []).forEach((sec, sIdx) => {
+      (sec.tasks || []).forEach(task => {
+        addTaskEditor(task.text, task.requirement || "optional", task.interval || 5, sIdx);
+      });
+    });
+  }
+}
+
+// EDITOR PROTOCOL
+
+function addSectionEditor(title = "", text = "", color = "") {
+  const div = document.createElement("div");
+  div.className = "section-editor";
+
+  div.innerHTML = `
+    <div class="proto-drag-handle">⋮⋮</div>
+    <div class="left-col">
+      <label>Nom</label>
+      <input class="sec-title" value="${title}">
+
+      <label>Color</label>
+      <select class="sec-color">
+        <option value="">Cap</option>
+        <option value="red" ${color==="red"?"selected":""}>Vermell</option>
+        <option value="blue" ${color==="blue"?"selected":""}>Blau</option>
+        <option value="purple" ${color==="purple"?"selected":""}>Porpra</option>
+        <option value="orange" ${color==="orange"?"selected":""}>Taronja</option>
+        <option value="green" ${color==="green"?"selected":""}>Verd</option>
+      </select>
+
+      <button onclick="this.closest('.section-editor').remove()">Eliminar secció</button>
+    </div>
+
+    <div class="right-col">
+      <label>Text</label>
+      <textarea class="sec-text"></textarea>
+      <div class="forbidden-warning">⚠️ Conté paraules reservades</div>
+    </div>
+  `;
+
+  document.getElementById("sections-editor").appendChild(div);
+
+  // D: dragstart directament al handle — únic element que inicia el drag
+  const handle = div.querySelector(".proto-drag-handle");
+  handle.addEventListener("mousedown", () => { div.draggable = true; });
+  handle.addEventListener("mouseup",   () => { div.draggable = false; });
+  div.addEventListener("dragstart", e => {
+    protoDragSrc = div;
+    div.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    // Inserim l'indicador al contenidor perquè estigui llest
+    protocolSectionsEditor.appendChild(protoDragIndicator);
+    // Petit delay perquè el navegador faci la imatge del drag abans de canviar opacity
+    setTimeout(() => { div.style.opacity = "0.4"; }, 0);
+  });
+  div.addEventListener("dragend", () => {
+    div.draggable = false;
+    div.style.opacity = "";
+    div.classList.remove("dragging");
+  });
+
+  const area = div.querySelector(".sec-text");
+  area.value = text;
+  attachForbiddenListener(area);
+}
+
+// EDITOR CHECKLIST: SECCIONS
+
+function addChecklistSectionEditor(title = "", color = "") {
+  const row = document.createElement("div");
+  row.className = "checklist-section-row";
+  // NO posem draggable="true" per defecte; l'activem des del handle (com al protocol)
+
+  row.innerHTML = `
+    <div class="section-drag-handle">⋮⋮</div>
+    <input class="checklist-section-row-name" placeholder="Nom de la secció" value="${title}">
+    <select class="checklist-section-row-color">
+      <option value="">Cap</option>
+      <option value="red" ${color==="red"?"selected":""}>Vermell</option>
+      <option value="blue" ${color==="blue"?"selected":""}>Blau</option>
+      <option value="purple" ${color==="purple"?"selected":""}>Porpra</option>
+      <option value="orange" ${color==="orange"?"selected":""}>Taronja</option>
+      <option value="green" ${color==="green"?"selected":""}>Verd</option>
+    </select>
+    <button onclick="removeChecklistSectionRow(this)">Eliminar</button>
+  `;
+  document.getElementById("checklist-sections-editor").appendChild(row);
+
+  // Activar draggable NOMÉS quan l'usuari agafa el handle (igual que protocol)
+  const handle = row.querySelector(".section-drag-handle");
+  handle.addEventListener("mousedown", () => { row.draggable = true;});
+  handle.addEventListener("touchstart", () => { row.draggable = true; }, { passive: true });
+  handle.addEventListener("mouseleave", () => {if (!checkDragSrc) row.draggable = false;});
+  refreshTaskSectionSelects();
+}
+
+function removeChecklistSectionRow(btn) {
+  const row = btn.closest(".checklist-section-row");
+  const index = Array.from(document.querySelectorAll("#checklist-sections-editor .checklist-section-row")).indexOf(row);
+
+  // Si hi ha tasques assignades a aquesta secció, bloquegem l'eliminació
+  const anyTaskUsing = Array.from(document.querySelectorAll(".task-editor-block")).some(block => {
+    const sel = block.querySelector(".task-editor-section-select");
+    return parseInt(sel.value) === index;
+  });
+
+  if (anyTaskUsing) {
+    alert("No es pot eliminar una secció que té tasques assignades. Reassigna les tasques abans d'eliminar-la.");
+    return;
+  }
+
+  row.remove();
+  refreshTaskSectionSelects();
+}
+
+// Actualitza els desplegables de secció de totes les tasques
+function refreshTaskSectionSelects() {
+  const sectionRows = document.querySelectorAll("#checklist-sections-editor .checklist-section-row");
+  const names = Array.from(sectionRows).map(r => r.querySelector(".checklist-section-row-name").value || "Secció");
+
+  document.querySelectorAll(".task-editor-section-select").forEach(sel => {
+    const current = sel.value;
+    sel.innerHTML = "";
+    names.forEach((name, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (current && current < names.length) {
+      sel.value = current;
+    }
+  });
+}
+
+const sectionEditor = document.getElementById("checklist-sections-editor");
+const checkDragIndicator = document.createElement("div");
+checkDragIndicator.className = "check-drag-indicator";
+let checkDragSrc = null;
+
+// Neteja robusta: garanteix que cap element quedi en estat "dragging"
+function cleanupCheckDrag() {
+  if (checkDragSrc) {
+    checkDragSrc.classList.remove("dragging");
+    checkDragSrc.style.opacity = "";
+    checkDragSrc.draggable = false;
+    checkDragSrc = null;
+  }
+  // Neteja defensiva: elimina classe dragging de qualsevol fila que hagi quedat bruta
+  document.querySelectorAll(".checklist-section-row.dragging").forEach(el => {
+    el.classList.remove("dragging");
+    el.style.opacity = "";
+    el.draggable = false;
+  });
+  if (checkDragIndicator.parentNode) checkDragIndicator.parentNode.removeChild(checkDragIndicator);
+}
+
+function getCheckDragTarget(y) {
+  const items = [...sectionEditor.querySelectorAll(".checklist-section-row:not(.dragging)")];
+  for (const item of items) {
+    const box = item.getBoundingClientRect();
+    if (y < box.top + box.height / 2) return item;
+  }
+  return null;
+}
+
+sectionEditor.addEventListener("dragstart", e => {
+  const row = e.target.closest(".checklist-section-row");
+  if (!row) return;
+  // Neteja preventiva per si hi havia algun estat brut anterior
+  cleanupCheckDrag();
+  checkDragSrc = row;
+  row.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move";
+  // Opacity directa sense setTimeout per evitar condicions de carrera
+  row.style.opacity = "0.4";
+  sectionEditor.appendChild(checkDragIndicator);
+});
+
+sectionEditor.addEventListener("dragend", () => {
+  cleanupCheckDrag();
+  refreshTaskSectionSelects();
+});
+
+sectionEditor.addEventListener("dragover", e => {
+  e.preventDefault();
+  if (!checkDragSrc) return;
+  const target = getCheckDragTarget(e.clientY);
+  if (target) sectionEditor.insertBefore(checkDragIndicator, target);
+  else sectionEditor.appendChild(checkDragIndicator);
+});
+
+sectionEditor.addEventListener("dragleave", e => {
+  if (!sectionEditor.contains(e.relatedTarget) && checkDragIndicator.parentNode)
+    checkDragIndicator.parentNode.removeChild(checkDragIndicator);
+});
+
+sectionEditor.addEventListener("drop", e => {
+  e.preventDefault();
+  if (!checkDragSrc) return;
+  const target = getCheckDragTarget(e.clientY);
+  if (target) sectionEditor.insertBefore(checkDragSrc, target);
+  else sectionEditor.appendChild(checkDragSrc);
+  cleanupCheckDrag();
+  refreshTaskSectionSelects();
+});
+
+// Captura de seguretat global: si el drag acaba fora del contenidor (p.ex. fora
+// de la finestra o sobre un element que no accepta drop), dragend pot no
+// disparar-se correctament en alguns navegadors mòbils. El mouseup global
+// garanteix la neteja en tots els casos.
+document.addEventListener("mouseup", () => {
+  if (checkDragSrc) {
+    cleanupCheckDrag();
+    refreshTaskSectionSelects();
+  }
+});
+
+// Drag & Drop per seccions de PROTOCOL
+// Usem un indicador visual de posició (línia) i reordenem al drop,
+// no al dragover, perquè les section-editor són elements alts i
+// getDragAfterElement falla quan l'element arrossegat segueix al DOM.
+const protocolSectionsEditor = document.getElementById("sections-editor");
+
+// Indicador visual de posició de drop
+const protoDragIndicator = document.createElement("div");
+protoDragIndicator.id = "proto-drop-indicator";
+protoDragIndicator.style.cssText =
+  "height:3px;background:#4B0082;border-radius:2px;margin:2px 0;display:none;pointer-events:none;";
+
+let protoDragSrc = null;
+
+function getProtoDragTarget(y) {
+  // Retorna l'element .section-editor davant del qual cal inserir,
+  // o null si cal inserir al final. Ignora l'element que s'arrossega.
+  const items = [...protocolSectionsEditor.querySelectorAll(".section-editor:not(.dragging)")];
+  for (const item of items) {
+    const box = item.getBoundingClientRect();
+    if (y < box.top + box.height / 2) return item;
+  }
+  return null;
+}
+
+protocolSectionsEditor.addEventListener("dragover", e => {
+  e.preventDefault();
+  if (!protoDragSrc) return;
+
+  const target = getProtoDragTarget(e.clientY);
+  protoDragIndicator.style.display = "block";
+  if (target) {
+    protocolSectionsEditor.insertBefore(protoDragIndicator, target);
+  } else {
+    protocolSectionsEditor.appendChild(protoDragIndicator);
+  }
+});
+
+protocolSectionsEditor.addEventListener("dragleave", e => {
+  // Amagar indicador quan el cursor surt del contenidor
+  if (!protocolSectionsEditor.contains(e.relatedTarget)) {
+    protoDragIndicator.style.display = "none";
+  }
+});
+
+protocolSectionsEditor.addEventListener("drop", e => {
+  e.preventDefault();
+  if (!protoDragSrc) return;
+
+  const target = getProtoDragTarget(e.clientY);
+  if (target) {
+    protocolSectionsEditor.insertBefore(protoDragSrc, target);
+  } else {
+    protocolSectionsEditor.appendChild(protoDragSrc);
+  }
+
+  protoDragIndicator.style.display = "none";
+  protocolSectionsEditor.removeChild(protoDragIndicator);
+  protoDragSrc = null;
+});
+
+protocolSectionsEditor.addEventListener("dragend", e => {
+  if (protoDragSrc) protoDragSrc.classList.remove("dragging");
+  protoDragIndicator.style.display = "none";
+  if (protoDragIndicator.parentNode) {
+    protoDragIndicator.parentNode.removeChild(protoDragIndicator);
+  }
+  protoDragSrc = null;
+});
+
+document.addEventListener("dragover", e => {
+  const dragging = document.querySelector(".task-editor-block.dragging");
+  if (!dragging) return;
+
+  const sectionRows = [...document.querySelectorAll(".checklist-section-row")];
+
+  for (const sec of sectionRows) {
+    const rect = sec.getBoundingClientRect();
+    if (e.clientY > rect.top && e.clientY < rect.bottom) {
+      sec.classList.add("drop-target");
+    } else {
+      sec.classList.remove("drop-target");
+    }
+  }
+});
+
+document.addEventListener("drop", e => {
+  const dragging = document.querySelector(".task-editor-block.dragging");
+  if (!dragging) return;
+
+  const sectionRows = [...document.querySelectorAll(".checklist-section-row")];
+
+  for (let i = 0; i < sectionRows.length; i++) {
+    const sec = sectionRows[i];
+    const rect = sec.getBoundingClientRect();
+
+    if (e.clientY > rect.top && e.clientY < rect.bottom) {
+      sec.classList.remove("drop-target");
+
+      // Inserim la tasca just després de la secció
+      sec.insertAdjacentElement("afterend", dragging);
+
+      // Actualitzem el desplegable de secció
+      const sel = dragging.querySelector(".task-editor-section-select");
+      sel.value = i;
+
+      return;
+    }
+  }
+});
+
+function getDragAfterElement(container, y, selector) {
+  const elements = [...container.querySelectorAll(selector)];
+
+  return elements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// EDITOR CHECKLIST: TASQUES
+function addTaskEditor(text = "", requirement = "optional", interval = 5, sectionIndex = 0) {
+  const block = document.createElement("div");
+
+  // 🔥 PRIMER CANVI: fem que la tasca sigui arrossegable
+  block.className = "task-editor-block";
+  block.setAttribute("draggable", "true");
+
+  block.innerHTML = `
+    <label>Text de la tasca</label>
+    <textarea class="task-text"></textarea>
+    <div class="forbidden-warning">⚠️ Conté paraules reservades</div>
+
+    <div class="task-editor-line2">
+      <div>
+        <label>Secció</label>
+        <select class="task-editor-section-select"></select>
+      </div>
+
+      <div>
+        <label>Requeriment</label>
+        <select class="task-editor-req-select">
+          <option value="optional">Opcional</option>
+          <option value="mandatory">Obligatori</option>
+          <option value="interval">Obligatori amb interval</option>
+        </select>
+      </div>
+
+      <div class="task-editor-interval-wrapper">
+        <label>Interval (min)</label>
+        <input type="number" class="task-interval" min="1" value="${interval || 5}">
+      </div>
+
+      <button class="task-editor-delete-btn" onclick="this.closest('.task-editor-block').remove()">Eliminar tasca</button>
+    </div>
+  `;
+
+  document.getElementById("tasks-editor").appendChild(block);
+
+  // 🔥 AFEGIM LISTENERS DE DRAG & DROP
+  block.addEventListener("dragstart", (e) => {
+    block.classList.add("dragging");
+    e.dataTransfer.setData("text/plain", "");
+  });
+
+  block.addEventListener("dragend", () => {
+    block.classList.remove("dragging");
+  });
+
+  // --- resta del teu codi ---
+  const area = block.querySelector(".task-text");
+  area.value = text;
+  attachForbiddenListener(area);
+
+  refreshTaskSectionSelects();
+  const sectionSelect = block.querySelector(".task-editor-section-select");
+  if (sectionSelect.options.length > 0) {
+    sectionSelect.value = Math.min(sectionIndex, sectionSelect.options.length - 1);
+  }
+
+  const reqSelect = block.querySelector(".task-editor-req-select");
+  reqSelect.value = requirement;
+  const intervalWrapper = block.querySelector(".task-editor-interval-wrapper");
+
+  function updateIntervalVisibility() {
+    if (reqSelect.value === "interval") {
+      intervalWrapper.style.display = "flex";
+    } else {
+      intervalWrapper.style.display = "none";
+    }
+  }
+
+  reqSelect.addEventListener("change", updateIntervalVisibility);
+  updateIntervalVisibility();
+}
+const tasksEditor = document.getElementById("tasks-editor");
+
+tasksEditor.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  const dragging = document.querySelector(".dragging");
+  const after = getDragAfterElement(tasksEditor, e.clientY);
+  if (after == null) {
+    tasksEditor.appendChild(dragging);
+  } else {
+    tasksEditor.insertBefore(dragging, after);
+  }
+});
+
+function getDragAfterElement(container, y) {
+  const elements = [...container.querySelectorAll(".task-editor-block:not(.dragging)")];
+
+  return elements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// PARAULES PROHIBIDES
+
+const forbiddenVoiceWords = [
+  "següent", "endavant", "passa", "continua", "segueix","fet","realitzat",
+  "enrere", "anterior", "torna enrere", "retrocedeix",
+  "llegeix", "comença lectura", "inicia lectura",
+  "atura't", "para", "stop",
+  "scroll", "avall", "baix", "baixa",
+  "puja", "amunt", "a dalt",
+  "repetir", "repeteix", "torna-hi", "comença", "començar",
+  "reiniciar", "reinicia",
+  "pantalla inicial"
+];
+
+function detectForbiddenWords(text) {
+  const found = [];
+  const lower = (text || "").toLowerCase();
+
+  forbiddenVoiceWords.forEach(word => {
+    if (lower.includes(word.toLowerCase())) {
+      found.push(word);
+    }
+  });
+
+  return found;
+}
+
+function attachForbiddenListener(area) {
+  const warn = area.parentElement.querySelector(".forbidden-warning");
+
+  function updateWarning() {
+    const found = detectForbiddenWords(area.value);
+    if (found.length > 0) {
+      if (warn) warn.style.display = "block";
+      area.classList.add("forbidden");
+    } else {
+      if (warn) warn.style.display = "none";
+      area.classList.remove("forbidden");
+    }
+  }
+
+  area.addEventListener("input", updateWarning);
+  updateWarning();
+}
+
+// GUARDAR EMERGÈNCIA
+function saveEmergency() {
+  const id = document.getElementById("emergency-select").value;
+  const baseName = document.getElementById("edit-name").value.trim();
+  const mode = document.querySelector('input[name="edit-mode"]:checked').value;
+
+  if (!baseName) {
+    alert("Cal un nom.");
+    return;
+  }
+
+  // --- 1. Comprovació de paraules prohibides ---
+  let allForbidden = new Set();
+
+  if (mode === "protocol") {
+    document.querySelectorAll(".sec-text").forEach(area => {
+      detectForbiddenWords(area.value).forEach(w => allForbidden.add(w));
+    });
+  } else {
+    document.querySelectorAll(".task-text").forEach(area => {
+      detectForbiddenWords(area.value).forEach(w => allForbidden.add(w));
+    });
+  }
+
+  if (allForbidden.size > 0) {
+    alert(
+      "Les següents paraules interfereixen amb les ordres de veu:\n\n" +
+      Array.from(allForbidden).join(", ") +
+      "\n\nSi us plau cerca sinònims per poder gravar l'emergència."
+    );
+    return;
+  }
+
+  let sections = [];
+  let checklistSections = [];
+
+  // --- 2. MODE PROTOCOL ---
+  if (mode === "protocol") {
+    sections = [...document.querySelectorAll("#sections-editor .section-editor")].map(div => ({
+      title: div.querySelector(".sec-title").value.trim(),
+      text: div.querySelector(".sec-text").value.trim(),
+      color: div.querySelector(".sec-color").value
+    }));
+
+    if (sections.length === 0) {
+      alert("Cal almenys una secció.");
+      return;
+    }
+  }
+
+  // --- 3. MODE CHECKLIST ---
+  else {
+    const sectionRows = [...document.querySelectorAll("#checklist-sections-editor .checklist-section-row")];
+
+    if (sectionRows.length === 0) {
+      alert("Cal almenys una secció de checklist.");
+      return;
+    }
+
+    // 3A. Crear estructura buida de seccions en ordre visual
+    checklistSections = sectionRows.map(row => ({
+      title: row.querySelector(".checklist-section-row-name").value.trim() || "Secció",
+      color: row.querySelector(".checklist-section-row-color").value,
+      tasks: []
+    }));
+
+    // 3B. Recollir totes les tasques en ordre visual
+    const taskBlocks = [...document.querySelectorAll("#tasks-editor .task-editor-block")];
+
+    if (taskBlocks.length === 0) {
+      alert("Cal almenys una tasca.");
+      return;
+    }
+
+    // 3C. Assignar cada tasca a la seva secció (segons desplegable)
+    taskBlocks.forEach(block => {
+      const text = block.querySelector(".task-text").value.trim();
+      const secIndex = parseInt(block.querySelector(".task-editor-section-select").value) || 0;
+      const requirement = block.querySelector(".task-editor-req-select").value;
+      const interval = parseInt(block.querySelector(".task-interval").value) || 0;
+
+      checklistSections[secIndex].tasks.push({
+        text,
+        requirement,
+        interval,
+        done: false
+      });
+    });
+
+    // 3D. Reordenar tasques segons l'ordre de seccions
+    // (ja estan ordenades perquè checklistSections segueix l'ordre visual)
+  }
+
+  // --- 4. Netejar nom i afegir sufix correcte (C) ---
+  // Eliminem qualsevol terminació existent (+protocol, +checklist, protocol, checklist)
+  // per evitar dobles nomenclatures com "Eclàmpsia protocol checklist"
+  let cleanName = baseName
+    .replace(/\s*\+?\s*(protocol|checklist)\s*$/i, "")
+    .trim();
+  const fullName = cleanName + (mode === "protocol" ? " protocol" : " checklist");
+
+  // --- 4b. E: Assegurar secció Finalització en mode checklist ---
+  if (mode === "checklist") {
+    const hasFinalitzacio = checklistSections.some(
+      s => s.title.trim().toLowerCase() === "finalització"
+    );
+    if (!hasFinalitzacio) {
+      checklistSections.push({
+        title: "Finalització",
+        color: "",
+        tasks: [{
+          text: "Sincronització de cronòmetres",
+          requirement: "mandatory",
+          interval: 0,
+          done: false
+        }]
+      });
+    }
+  }
+
+  // --- 5. Guardar emergència ---
+  if (id === "new") {
+    emergencies.push({
+      id: cleanName.toLowerCase().replace(/\s+/g, "_") + "_" + Date.now(),
+      name: fullName,
+      mode,
+      sections,
+      checklistSections
+    });
+  } else {
+    const e = emergencies.find(x => x.id === id);
+    e.name = fullName;
+    e.mode = mode;
+    e.sections = sections;
+    e.checklistSections = checklistSections;
+  }
+
+  saveEmergencies();
+  goHome();
+}
+
+/* EXPORT / IMPORT */
+
+function exportEmergencies() {
+  const data = JSON.stringify(emergencies, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "emergencies.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function validateEmergency(e) {
+  return (
+    typeof e.id === "string" &&
+    typeof e.name === "string"
+  );
+}
+
+function importEmergencies(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported) || !imported.every(validateEmergency)) {
+        alert("El fitxer JSON no té el format d’emergències esperat.");
+        return;
+      }
+
+      emergencies = emergencies.concat(imported);
+      saveEmergencies();
+      renderEmergencyList();
+      alert("Emergències importades correctament.");
+    } catch {
+      alert("Error en llegir el fitxer JSON.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+// --- Reconeixement de veu ---
+
+let recognition = null;
+let voiceActive = false;
+
+function initVoiceControl() {
+  if (recognition) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("El teu navegador no suporta reconeixement de veu.");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "ca-ES";
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const last = event.results[event.results.length - 1];
+    const text = last[0].transcript.trim().toLowerCase();
+    console.log("Comanda de veu:", text);
+
+    if (
+      text.includes("següent") ||
+      text.includes("endavant") ||
+      text.includes("passa") ||
+      text.includes("continua") ||
+      text.includes("segueix")
+    ) {
+      const mode = current?.mode || "protocol";
+      if (mode === "protocol") nextSection();
+      else skipTask();
+    } else if (
+      text.includes("fet") ||
+      text.includes("realitzat")
+    ) {
+      const mode = current?.mode || "protocol";
+      if (mode === "protocol") nextSection();
+      else taskDone();
+    } else if (
+      text.includes("enrere") ||
+      text.includes("anterior") ||
+      text.includes("torna enrere") ||
+      text.includes("retrocedeix")
+    ) {
+      if ((current?.mode || "protocol") === "protocol") prevSection();
+    } else if (
+      text.includes("llegeix") ||
+      text.includes("comença lectura") ||
+      text.includes("inicia lectura")
+    ) {
+      if (autoReadEnabled) readSection();
+    } else if (
+      text.includes("atura't") ||
+      text.includes("para") ||
+      text.includes("stop")
+    ) {
+      stopReading();
+    } else if (
+      text.includes("scroll") ||
+      text.includes("avall") ||
+      text.includes("baix") ||
+      text.includes("baixa") 
+    ) {
+      scrollDown();
+    } else if (
+      text.includes("puja") ||
+      text.includes("amunt") ||
+      text.includes("a dalt") 
+    ) {
+      scrollUp();
+    } else if (
+      text.includes("repetir") ||
+      text.includes("repeteix") ||
+      text.includes("torna-hi") ||
+      text.includes("comença") ||
+      text.includes("començar") ||
+      text.includes("reiniciar") ||
+      text.includes("reinicia")
+    ) {
+      repeatReading();
+    } else if (
+      text.includes("pantalla inicial")
+    ) {
+      goHome();
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.warn("Error de veu:", e.error);
+  };
+}
+
+function toggleVoiceSwitch() {
+  const checked = document.getElementById("voice-toggle").checked;
+  // Si estem dins d'una emergència, activar/desactivar el micròfon immediatament
+  const viewerVisible = document.getElementById("screen-viewer").style.display === "block";
+  updateModeBanner();
+  if (viewerVisible) {
+    toggleVoiceControl(checked);
+  }
+  // Si estem a la pantalla principal, només guardem la preferència visual;
+  // el micròfon s'iniciarà quan s'entri a l'emergència
+}
+
+function toggleVoiceButton() {
+  toggleVoiceControl(!voiceActive);
+}
+
+function toggleVoiceControl(forceOn = null) {
+  const btn = document.getElementById("voice-btn");
+  const toggle = document.getElementById("voice-toggle");
+
+  // --- Determinar nou estat ---
+  if (forceOn === true) {
+    voiceActive = true;
+  } else if (forceOn === false) {
+    voiceActive = false;
+  } else {
+    voiceActive = !voiceActive;
+  }
+
+  // --- Sincronitzar el toggle visual ---
+  if (toggle) toggle.checked = voiceActive;
+
+  // --- Aplicar estat ---
+  if (voiceActive) {
+    // Inicialitzar (i demanar permís al micròfon) només quan s'activa de debò
+    if (!recognition) {
+      initVoiceControl();
+      if (!recognition) {
+        alert("El reconeixement de veu no està disponible en aquest navegador.");
+        voiceActive = false;
+        if (toggle) toggle.checked = false;
+        if (btn) { btn.textContent = "🎤 Veu OFF"; btn.style.background = "#4B0082"; }
+        return;
+      }
+    }
+    try {
+      if (recognition.state !== "running") recognition.start();
+    } catch (e) {
+      console.warn("Error en iniciar reconeixement:", e);
+    }
+    if (btn) { btn.textContent = "🎤 Veu ON"; btn.style.background = "#0B4F2C"; }
+  } else {
+    try {
+      if (recognition) recognition.stop();
+    } catch (e) {
+      console.warn("Error en aturar reconeixement:", e);
+    }
+    if (btn) { btn.textContent = "🎤 Veu OFF"; btn.style.background = "#4B0082"; }
+  }
+}
+
+// --- Cronòmetre d’emergència ---
+
+let timerInterval = null;
+let timerSeconds = 0;
+let audioCtx = null;
+
+function initAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playTick() {
+  initAudioContext();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "square";
+  osc.frequency.value = 150;
+  gain.gain.value = 0.05;
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const now = audioCtx.currentTime;
+  osc.start(now);
+  osc.stop(now + 0.02);
+}
+
+function playBeepLa5() {
+  initAudioContext();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.value = 880;
+  gain.gain.value = 0.25;
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const now = audioCtx.currentTime;
+  osc.start(now);
+  osc.stop(now + 0.12);
+}
+
+function startEmergencyTimer() {
+  resetSyncPressMemory();
+  const timer = document.getElementById("emergency-timer");
+  const display = document.getElementById("timer-display");
+
+  timerSeconds = 0;
+  timer.style.display = "block";
+
+  playTick();
+
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+        
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+
+    display.textContent =
+      String(minutes).padStart(2, "0") + ":" +
+      String(seconds).padStart(2, "0");
+
+    playTick();
+
+    if (seconds === 0) {
+      playBeepLa5();
+    }
+
+    checkTaskIntervals();
+    // Punt 5: Guardar progrés checklist periòdicament
+    if (current && (current.mode || "protocol") === "checklist") {
+      saveChecklistProgress();
+    }
+    
+  }, 1000);
+}
+
+function stopEmergencyTimer() {
+  clearInterval(timerInterval);
+  const timer = document.getElementById("emergency-timer");
+  if (timer) timer.style.display = "none";
+}
+
+// INTERVALS DE TASQUES (CHECKLIST)
+let lastOverdueHash = "";
+
+function checkTaskIntervals() {
+  if (!current || (current.mode || "protocol") !== "checklist") return false;
+
+  const sections = current.checklistSections || [];
+  let overdueList = [];
+
+  sections.forEach((sec, sIdx) => {
+    (sec.tasks || []).forEach((t, tIdx) => {
+      if (t.done) return;
+      if (t.requirement !== "interval") return;
+      if (!t.interval || t.interval <= 0) return;
+
+      const period = t.interval * 60;
+      if (timerSeconds >= period) {
+        t._overdue = true;
+        overdueList.push({ secIndex: sIdx, taskIndex: tIdx });
+      }
+    });
+  });
+
+  // Evitar re-renders si l'estat overdue no ha canviat
+  const hash = JSON.stringify(overdueList) + "|" + (currentTaskPointer ? JSON.stringify(currentTaskPointer) : "null");
+
+  if (overdueList.length === 0) {
+    if (hash !== lastOverdueHash) {
+      lastOverdueHash = hash;
+      renderChecklist();
+    }
+    return false;
+  }
+
+  overdueList.sort((a, b) => {
+    if (a.secIndex !== b.secIndex) return a.secIndex - b.secIndex;
+    return a.taskIndex - b.taskIndex;
+  });
+
+  const isCurrentOverdue =
+    currentTaskPointer &&
+    overdueList.some(o =>
+      o.secIndex === currentTaskPointer.secIndex &&
+      o.taskIndex === currentTaskPointer.taskIndex
+    );
+
+  if (!isCurrentOverdue) {
+    currentTaskPointer = overdueList[0];
+    const newHash = JSON.stringify(overdueList) + "|" + JSON.stringify(currentTaskPointer);
+    if (newHash !== lastOverdueHash) {
+      lastOverdueHash = newHash;
+      renderChecklist();
+      if (autoReadEnabled) readSection();
+    }
+    return true;
+  }
+
+  const currentIsDone =
+    currentTaskPointer &&
+    sections[currentTaskPointer.secIndex].tasks[currentTaskPointer.taskIndex].done;
+
+  if (currentIsDone) {
+    const idx = overdueList.findIndex(o =>
+      o.secIndex === currentTaskPointer.secIndex &&
+      o.taskIndex === currentTaskPointer.taskIndex
+    );
+
+    const next = overdueList[idx + 1];
+
+    if (next) {
+      currentTaskPointer = next;
+      const newHash = JSON.stringify(overdueList) + "|" + JSON.stringify(currentTaskPointer);
+      if (newHash !== lastOverdueHash) {
+        lastOverdueHash = newHash;
+        renderChecklist();
+        if (autoReadEnabled) readSection();
+      }
+      return true;
+    }
+
+    const nextPending = getNextPendingTaskPointer(null);
+    if (nextPending) {
+      currentTaskPointer = nextPending;
+      const newHash = JSON.stringify(overdueList) + "|" + JSON.stringify(currentTaskPointer);
+      if (newHash !== lastOverdueHash) {
+        lastOverdueHash = newHash;
+        renderChecklist();
+        if (autoReadEnabled) readSection();
+      }
+      return true;
+    }
+  }
+
+  if (hash !== lastOverdueHash) {
+    lastOverdueHash = hash;
+    renderChecklist();
+  }
+  return false;
+}
+
+//Botó Finalitzar amb validació i resum
+async function finishEmergency() {
+  const { mandatoryDone, hasOptionalPending, hasAnyPending } = getChecklistStatus();
+
+  // Totes les tasques fetes → finalitzar directament
+  if (!hasAnyPending) {
+    return showSummary();
+  }
+
+  // Obligatòries fetes, però hi ha opcionals pendents → demanar confirmació
+  if (mandatoryDone && hasOptionalPending) {
+    const res = await mostrarModal(
+      "Tasques opcionals pendents",
+      "Encara hi ha tasques opcionals pendents. Vols finalitzar igualment?",
+      [
+        { label: "Sí, finalitzar", value: "si", color: "#003366" },
+        { label: "Cancel·lar",     value: "no", color: "#555"    }
+      ]
+    );
+    if (res === "si") showSummary();
+    return;
+  }
+
+  // Obligatòries pendents → informar (el botó no hauria d’aparèixer en aquest cas)
+  await mostrarModal(
+    "Tasques obligatòries pendents",
+    "No pots finalitzar perquè encara hi ha tasques obligatòries pendents.",
+    [{ label: "Entesos", value: "ok", color: "#8B0000" }]
+  );
+}
+
+//Funció de resum
+function showSummary() {
+  // 2. Amagar rellotge i botons del comptador
+  document.getElementById("emergency-timer").style.display = "none";
+  document.getElementById("timer-sync-buttons").style.display = "none";
+  // 3. Construir resum
+  const container = document.getElementById("section-container");
+  let html = `<div class="section-block"><h3>Resum de l’emergència</h3></div>`;
+
+  // Helpers per calcular temps ajustat amb l'offset acumulat dels botons de sincronització
+  function adjustedSeconds(raw) { return Math.max(0, raw + timerOffset); }
+  function formatTime(totalSecs) {
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  const sections = current.checklistSections || [];
+  sections.forEach(sec => {
+    html += `<div class="section-block ${sanitize(sec.color || "")}">
+      <h3>${sanitize(sec.title)}</h3>
+    `;
+
+    (sec.tasks || []).forEach(t => {
+      const textHtml = sanitize(t.text || "").replace(/\n/g, "<br>");
+      let line = "";
+      let extra = "";
+
+      // OPCIONALS
+      if (t.requirement === "optional") {
+        if (!t.done) {
+          line = `<span style="color:#8B0000;">${textHtml}</span>`;
+          extra = ` <em style="color:#8B0000;">(Opcional no realitzada)</em>`;
+        } else {
+          line = textHtml;
+          if (typeof t.completedAtSeconds === "number") {
+            extra = ` <em>(Realitzada al minut ${formatTime(adjustedSeconds(t.completedAtSeconds))})</em>`;
+          } else {
+            extra = ` <em>(Realitzada)</em>`;
+          }
+        }
+      }
+
+      // OBLIGATÒRIES
+      else if (t.requirement === "mandatory") {
+        if (t.done) {
+          line = textHtml;
+          extra = ` <em>(Realitzada al minut ${formatTime(adjustedSeconds(t.completedAtSeconds))})</em>`;
+        } else {
+          line = `<span style="color:#8B0000;">${textHtml}</span>`;
+          extra = ` <em style="color:#8B0000;">(Obligatòria no realitzada)</em>`;
+        }
+      }
+
+      // INTERVAL
+      else if (t.requirement === "interval") {
+        const period = (t.interval || 0) * 60;
+
+        if (t.done && typeof t.completedAtSeconds === "number") {
+          const adjCompleted = adjustedSeconds(t.completedAtSeconds);
+          const overdue = adjCompleted > period;
+          line = overdue ? `<span style="color:#8B0000;">${textHtml}</span>` : textHtml;
+          extra = ` <em>(Realitzada al minut ${formatTime(adjCompleted)}, interval ${t.interval} min${overdue ? ", interval superat" : ""})</em>`;
+        } else if (!t.done) {
+          const adjNow = adjustedSeconds(timerSeconds);
+          const overdue = adjNow > period;
+          line = overdue ? `<span style="color:#8B0000;">${textHtml}</span>` : textHtml;
+          extra = ` <em style="color:#8B0000;">(Obligatòria amb interval ${t.interval} min, no realitzada)</em>`;
+        }
+      }
+
+      html += `<p>• ${line}${extra}</p>`;
+    });
+
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+  // 🔥 Mostrar botons de scroll si cal
+  updateOverflowButton();
+  stopReading();
+  stopEmergencyTimer();
+  // Punt 5: Netejar progrés en finalitzar
+  clearChecklistProgress();
+  
+  // 🔥 Activar scroll automàtic al resum
+  startAutoScroll();
+}
+
+// --- Sincronització del comptador i memòria local ---
+
+let syncPressCount = {
+  "+30": 0,
+  "+10": 0,
+  "-10": 0,
+  "-30": 0
+};
+
+// Offset acumulat total durant l'emergència (suma de tots els shiftTimer aplicats).
+// S'usa al resum per ajustar els temps de completació de les tasques.
+let timerOffset = 0;
+
+function resetSyncPressMemory() {
+  syncPressCount = { "+30": 0, "+10": 0, "-10": 0, "-30": 0 };
+  timerOffset = 0;
+  localStorage.setItem("syncPressCount", JSON.stringify(syncPressCount));
+}
+
+if (localStorage.getItem("syncPressCount")) {
+  syncPressCount = JSON.parse(localStorage.getItem("syncPressCount"));
+}
+
+function shiftTimer(seconds) {
+  const before = timerSeconds;
+  timerSeconds = Math.max(0, timerSeconds + seconds);
+  // Acumular l'offset real aplicat (pot diferir de 'seconds' si timerSeconds toca 0)
+  timerOffset += timerSeconds - before;
+  if (timerSeconds === 0) {
+    resetSyncPressMemory();
+  }
+
+  const display = document.getElementById("timer-display");
+  const minutes = Math.floor(timerSeconds / 60);
+  const secs = timerSeconds % 60;
+
+  display.textContent =
+    String(minutes).padStart(2, "0") + ":" +
+    String(secs).padStart(2, "0");
+}
+
+document.querySelectorAll("#timer-sync-buttons button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const shift = parseInt(btn.dataset.shift);
+    shiftTimer(shift);
+    const key = (shift > 0 ? "+" : "") + shift;
+    syncPressCount[key]++;
+    localStorage.setItem("syncPressCount", JSON.stringify(syncPressCount));
+  });
+});
+
+// DarkMode
+function toggleDarkMode() {
+  const body = document.body;
+  const isDark = document.getElementById("darkmode-switch").checked;
+
+  if (isDark) {
+    body.classList.add("darkmode");
+    localStorage.setItem("darkmode", "1");
+  } else {
+    body.classList.remove("darkmode");
+    localStorage.removeItem("darkmode");
+  }
+  updateModeBanner();
+}
+
+window.onload = () => {
+  if (localStorage.getItem("darkmode") === "1") {
+    document.body.classList.add("darkmode");
+    document.getElementById("darkmode-switch").checked = true;
+  }
+  updateModeBanner();
+  updateChecklistProgressBanner();
+};
+
+function toggleSilentMode() {
+  silentMode = document.getElementById("silent-mode").checked;
+
+  if (silentMode) {
+    autoReadEnabled = false;
+    stopReading();
+  } else {
+    autoReadEnabled = true;
+  }
+  updateModeBanner();
+}
+
+
+
+// ── Punt 2: Banner modes ───────────────────────────────────────────────────
+function updateModeBanner() {
+  const isDark   = document.body.classList.contains("darkmode");
+  const isSilent = document.getElementById("silent-mode")?.checked || false;
+  const isVoice  = document.getElementById("voice-toggle")?.checked || false;
+  const ids = ["mode-banner-home","mode-banner-viewer"];
+
+  // ✔️ Només amagar si NO hi ha cap mode actiu
+  if (!isSilent && !isVoice) {
+    ids.forEach(id => { const b=document.getElementById(id); if(b) b.style.display="none"; });
+    return;
+  }
+
+  let bg, icons, label, micro;
+
+  if (isVoice && isSilent) {
+    bg="#dcfce7"; icons="&#128263; &#127908;"; label="Mode mans lliures i silenciós ";
+    micro="Comanda: ‘Següent’ per avançar";
+  } else if (isVoice) {
+    bg="#dbeafe"; icons="&#127908;"; label="Mode mans lliures actiu ";
+    micro="Comanda: ‘Següent’ per avançar";
+  } else {
+    bg="#fef9c3"; icons="&#128263;"; label="Mode silenciós actiu ";
+    micro="La lectura automàtica està desactivada";
+  }
+
+  ids.forEach(id => {
+    const b=document.getElementById(id); if(!b) return;
+    b.style.display="block"; 
+    b.style.background=bg;
+    b.innerHTML=`<span class="banner-icons">${icons}</span><strong>${label}</strong><div class="banner-micro">${micro}</div>`;
+  });
+}
+
+// ── Punt 3: Freqüència d'ús ────────────────────────────────────────────────
+function incrementUsageCount(id) {
+  const k="usage_"+id; localStorage.setItem(k,(parseInt(localStorage.getItem(k)||"0"))+1);
+}
+function getUsageCount(id) { return parseInt(localStorage.getItem("usage_"+id)||"0"); }
+
+// ── Punt 4: Indicador secció/tasques ───────────────────────────────────────────
+function updateSectionIndicator() {
+  const el = document.getElementById("section-indicator");
+  if (!el || !current) { if (el) el.style.display = "none"; return; }
+  const mode = current.mode || "protocol";
+  let text;
+  if (mode === "protocol") {
+    text = `${sectionIndex + 1} / ${(current.sections || []).length}`;
+  } else {
+    // Usar getChecklistStatus per evitar doble comptatge
+    let total = 0;
+    let pending = 0;
+    (current.checklistSections || []).forEach(s => (s.tasks || []).forEach(tk => {
+      total++;
+      if (!tk.done) pending++;
+    }));
+    text = `${pending} pend. / ${total}`;
+  }
+  el.textContent = text; el.style.display = "block";
+}
+
+// ── Punt 5: Estat persistent checklist ───────────────────────────────────────────────
+const CHECKLIST_PROGRESS_KEY="checklist_in_progress";
+
+function saveChecklistProgress(){
+  if(!current||(current.mode||"protocol")!=="checklist")return;
+  localStorage.setItem(CHECKLIST_PROGRESS_KEY,JSON.stringify({
+    id:current.id, timerSeconds, timerOffset, currentTaskPointer,
+    checklistSections:JSON.parse(JSON.stringify(current.checklistSections||[]))
+  }));
+}
+function clearChecklistProgress(){
+  localStorage.removeItem(CHECKLIST_PROGRESS_KEY);
+  updateChecklistProgressBanner();
+}
+function updateChecklistProgressBanner(){
+  const banner=document.getElementById("checklist-progress-banner");
+  if(!banner)return;
+  const raw=localStorage.getItem(CHECKLIST_PROGRESS_KEY);
+  if(!raw){banner.style.display="none";return;}
+  try{
+    const st=JSON.parse(raw);
+    const em=emergencies.find(x=>x.id===st.id);
+    const name=em?em.name:"Emergència";
+    banner.style.display="block";
+    banner.innerHTML=`&#9654; <strong>Checklist en progrés:</strong> ${sanitize(name)} &mdash; toca per reprendre`;
+  }catch{banner.style.display="none";}
+}
+function resumeChecklistInProgress(){
+  const raw=localStorage.getItem(CHECKLIST_PROGRESS_KEY);
+  if(!raw)return;
+  try{
+    const st=JSON.parse(raw);
+    const em=emergencies.find(x=>x.id===st.id);
+    if(!em){clearChecklistProgress();return;}
+    em.checklistSections=st.checklistSections;
+    current=em; timerSeconds=st.timerSeconds||0; timerOffset=st.timerOffset||0;
+    currentTaskPointer=st.currentTaskPointer||null; taskLastAlert={}; sectionIndex=0;
+    showScreen("screen-viewer");
+    toggleVoiceControl(document.getElementById("voice-toggle").checked);
+    document.getElementById("emergency-timer").style.display="block";
+    document.getElementById("timer-sync-buttons").style.display="flex";
+    ["btn-prev","btn-next"].forEach(id=>document.getElementById(id).style.display="none");
+    ["btn-done","btn-skip"].forEach(id=>document.getElementById(id).style.display="inline-block");
+    renderChecklist(); updateSectionIndicator(); updateModeBanner();
+    autoReadEnabled=!silentMode;
+    if(autoReadEnabled)setTimeout(()=>readSection(),150);
+    startEmergencyTimerFrom();
+  }catch(err){console.error("Error reprendre:",err);clearChecklistProgress();}
+}
+function startEmergencyTimerFrom(){
+  clearInterval(timerInterval); lastOverdueHash="";
+  const display=document.getElementById("timer-display");
+  document.getElementById("emergency-timer").style.display="block";
+  const upd=()=>{display.textContent=String(Math.floor(timerSeconds/60)).padStart(2,"0")+":"+String(timerSeconds%60).padStart(2,"0");};
+  upd();
+  timerInterval=setInterval(()=>{
+    timerSeconds++; upd(); playTick();
+    if(timerSeconds%60===0)playBeepLa5();
+    checkTaskIntervals(); saveChecklistProgress();
+  },1000);
+}
+
+//funció dedicada a controlar el botó Finalitzar
+function updateFinishButtonVisibility() {
+  const finishBtn = document.getElementById("btn-finish");
+
+  // Si no hi ha emergència carregada o no és checklist → amagar
+  if (!current || current.mode !== "checklist") {
+    finishBtn.style.display = "none";
+    finishBtn.disabled = false;
+    return;
+  }
+
+  // Analitzar estat del checklist
+  const { hasMandatory, mandatoryDone, hasOptionalPending, hasAnyPending } = getChecklistStatus();
+
+  // Si no hi ha cap tasca pendent: totes completades → mostrar botó actiu
+  if (!hasAnyPending) {
+    finishBtn.style.display = "inline-block";
+    finishBtn.disabled = false;
+    finishBtn.style.opacity = "1";
+    return;
+  }
+
+  // Si no hi ha tasques obligatòries (tot opcional) → mostrar botó actiu
+  if (!hasMandatory) {
+    finishBtn.style.display = "inline-block";
+    finishBtn.disabled = false;
+    finishBtn.style.opacity = "1";
+    return;
+  }
+
+  // Si hi ha obligatòries i totes estan fetes → mostrar botó actiu
+  if (mandatoryDone) {
+    finishBtn.style.display = "inline-block";
+    finishBtn.disabled = false;
+    finishBtn.style.opacity = "1";
+    return;
+  }
+
+  // Si hi ha obligatòries pendents → amagar el botó
+  finishBtn.style.display = "none";
+  finishBtn.disabled = false;
+}
+
+//Funció per analitzar l’estat del checklist
+function getChecklistStatus() {
+  let hasMandatory = false;
+  let mandatoryDone = true;
+  let hasOptionalPending = false;
+  let hasAnyPending = false;
+
+  current.checklistSections.forEach(sec => {
+    sec.tasks.forEach(t => {
+      const req = t.requirement;  // 👈 coherent amb la resta del codi
+
+      const isMandatory =
+        req === "mandatory" || req === "interval"; // interval també és obligatori
+
+      if (isMandatory) {
+        hasMandatory = true;
+        if (!t.done) {
+          mandatoryDone = false;
+          hasAnyPending = true;
+        }
+      } else {
+        if (!t.done) {
+          hasOptionalPending = true;
+          hasAnyPending = true;
+        }
+      }
+    });
+  });
+
+  return { hasMandatory, mandatoryDone, hasOptionalPending, hasAnyPending };
+}
+
+/* INICIALITZACIÓ */
+
+renderEmergencyList();
+showScreen("screen-emergencies");
+// initVoiceControl() ja NO es crida aquí: el permís al micròfon
+// es demanarà quan l'usuari entri a una emergència amb el toggle activat.
+</script>
+
+</body>
+</html>
