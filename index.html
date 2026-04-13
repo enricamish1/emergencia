@@ -5,11 +5,11 @@
   <meta name="theme-color" content="#2F2F2F">
   <meta name="description" content="Guia per a l'atenció mèdica emergent">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="/emergencia/icon_192.png">
-  <link rel="apple-touch-icon" href="/emergencia/icon_192.png">
+  <link rel="icon" type="image/png" href="/emergencia/icon-192.png">
+  <link rel="apple-touch-icon" href="/emergencia/icon-192.png">
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+    navigator.serviceWorker.register('/emergencia/service-worker.js', { scope: '/' })
       .then(reg => {
         console.log('Service Worker registered successfully:', reg);
         reg.onupdatefound = () => {
