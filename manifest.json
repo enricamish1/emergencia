@@ -1,6 +1,7 @@
 {
 "name": "Emergència",
 "short_name": "Emergència mèdica",
+"id": "/emergencia/",
 "start_url": "/emergencia/",
 "display": "standalone",
 "description": "Guia per a l'atenció mèdica emergent",
