@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" href="/emergencia/icon-192.png">
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/emergencia/service-worker.js', { scope: '/' })
+    navigator.serviceWorker.register('/emergencia/service-worker.js', { scope: '/emergencia/' })
       .then(reg => {
         console.log('Service Worker registered successfully:', reg);
         reg.onupdatefound = () => {
