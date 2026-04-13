@@ -1,23 +1,23 @@
 {
 "name": "Emergència",
 "short_name": "Emergència mèdica",
-"start_url": "/",
+"start_url": "/emergencia/",
 "display": "standalone",
 "description": "Guia per a l'atenció mèdica emergent",
-"lang": " Catalan",
+"lang": "ca",
 "dir": "auto",
 "theme_color":  "#2F2F2F",
 "background_color":  "#2F2F2F",
 "orientation": "any",
 "icons": [
     {
-        "src": "https://www.pwabuilder.com/assets/icons/icon_512.png",
+        "src": "/emergencia/icon_512.png",
         "sizes": "512x512",
         "type": "image/png",
-        "purpose": "maskable"
+        "purpose": "maskable any"
     },
     {
-        "src": "https://www.pwabuilder.com/assets/icons/icon_192.png",
+        "src": "/emergencia/icon_192.png",
         "sizes": "192x192",
         "type": "image/png",
         "purpose": "any"
@@ -31,12 +31,7 @@
         "description": "A screenshot of the home page"
     }
 ],
-"related_applications": [
-    {
-        "platform":"windows",
-        "url": " The URL to your app in that app store"
-    }
-],
+"related_applications": [],
 "prefer_related_applications": false,
 "shortcuts": [
     {
